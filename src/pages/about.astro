@@ -1,7 +1,37 @@
 ---
-import Layout from '../layouts/BlogPost.astro';
+import BaseHead from '../components/BaseHead.astro';
+import Footer from '../components/Footer.astro';
+import Header from '../components/Header.astro';
+import { personJsonLd } from '../consts';
+
+const jsonLd = {
+	'@context': 'https://schema.org',
+	'@type': 'ProfilePage',
+	url: new URL('/about/', Astro.site).href,
+	mainEntity: personJsonLd(Astro.site),
+};
 ---
 
-<Layout title="About" description="About JKS9." pubDate={new Date('2026-12-07')}>
-	<p>Coming soon.</p>
-</Layout>
+<!doctype html>
+<html lang="en">
+	<head>
+		<BaseHead title="About" description="JKS9 is a back-end developer specialized in Node.js, NestJS and web scraping." />
+		<script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+	</head>
+	<body>
+		<Header />
+		<main>
+			<h1>About</h1>
+			<p>
+				I'm JKS9, a back-end developer specialized in Node.js, NestJS and web scraping. Web
+				scraping is the part I never get tired of: turning messy websites into clean, structured
+				data, and keeping it working in production.
+			</p>
+			<p>
+				You can find my code on <a href="https://github.com/JKS9">GitHub</a> and my answers on
+				<a href="https://www.reddit.com/user/JKS9_dev/">Reddit</a>.
+			</p>
+		</main>
+		<Footer />
+	</body>
+</html>
