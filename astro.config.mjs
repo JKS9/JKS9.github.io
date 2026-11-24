@@ -6,7 +6,7 @@ import { defineConfig, fontProviders } from "astro/config";
 
 // https://astro.build/config
 export default defineConfig({
-  site: "https://jks9.github.io",
+  site: "https://jks9.dev",
   integrations: [mdx(), sitemap()],
   fonts: [
     {
