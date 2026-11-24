@@ -17,7 +17,7 @@
 		0 16px 32px rgba(var(--gray), 33%);
 }
 body {
-	font-family: var(--font-atkinson);
+	font-family: var(--font-text);
 	margin: 0;
 	padding: 0;
 	text-align: left;
@@ -44,6 +44,9 @@ h6 {
 	margin: 0 0 0.5rem 0;
 	color: rgb(var(--black));
 	line-height: 1.2;
+	font-family: var(--font-title);
+	/* Rubik Mono One has a single weight: avoid a fake bold */
+	font-weight: 400;
 }
 h1 {
 	font-size: 3.052em;
@@ -92,6 +95,8 @@ img {
 	border-radius: 8px;
 }
 code {
+	/* Otherwise the browser forces its default monospace font */
+	font-family: inherit;
 	padding: 2px 5px;
 	background-color: rgb(var(--gray-light));
 	border-radius: 2px;

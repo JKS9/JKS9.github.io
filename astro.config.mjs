@@ -8,28 +8,35 @@ import { defineConfig, fontProviders } from "astro/config";
 export default defineConfig({
   site: "https://jks9.dev",
   integrations: [mdx(), sitemap()],
+  // Downloaded from Google Fonts at build time and served from the site:
+  // readers never send a request to Google.
   fonts: [
     {
-      provider: fontProviders.local(),
-      name: "Atkinson",
-      cssVariable: "--font-atkinson",
+      provider: fontProviders.google(),
+      name: "Rubik Mono One",
+      cssVariable: "--font-title",
+      weights: [400],
+      styles: ["normal"],
+      subsets: ["latin"],
       fallbacks: ["sans-serif"],
-      options: {
-        variants: [
-          {
-            src: ["./src/assets/fonts/atkinson-regular.woff"],
-            weight: 400,
-            style: "normal",
-            display: "swap",
-          },
-          {
-            src: ["./src/assets/fonts/atkinson-bold.woff"],
-            weight: 700,
-            style: "normal",
-            display: "swap",
-          },
-        ],
-      },
+    },
+    {
+      provider: fontProviders.google(),
+      name: "Courier Prime",
+      cssVariable: "--font-text",
+      weights: [400, 700],
+      styles: ["normal", "italic"],
+      subsets: ["latin"],
+      fallbacks: ["monospace"],
+    },
+    {
+      provider: fontProviders.google(),
+      name: "Reenie Beanie",
+      cssVariable: "--font-hand",
+      weights: [400],
+      styles: ["normal"],
+      subsets: ["latin"],
+      fallbacks: ["cursive"],
     },
   ],
 });
