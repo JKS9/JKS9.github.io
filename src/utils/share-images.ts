@@ -1,7 +1,7 @@
 // Images drawn at build time with Satori (layout → SVG) and resvg (SVG → PNG), from the boards
 // "Image d'aperçu" and "Icône d'onglet" of the mockups canvas:
 //   - siteImage: home, about, 404 (the cover, without the N°9 stamp, with the tagline of option 2)
-//   - blogImage: the blog and topic pages (option 5, the table of contents)
+//   - blogImage: the blog and topic pages (option 5, the table of contents, filled with the newest issues)
 //   - articleImage: one per article (option 9: issue number, topics, title off register, date)
 //   - favicon: option 5, "J9" in white on a green square
 // Fonts are TTF files in src/assets/fonts (Satori can't read WOFF2), under the SIL Open Font License.
@@ -166,14 +166,54 @@ export function siteImage(): SatoriElement {
 	);
 }
 
-/** The blog and topic pages: a table of contents. Generic lines, so the image never goes stale. */
-export function blogImage(): SatoriElement {
-	const row = (number: string, text: string, latest = false): SatoriElement =>
+/** One line of the table of contents: an issue number and its title */
+export interface ContentsLine {
+	label: string; // "N°01"
+	title: string;
+}
+
+// The title column is 880px wide: 40 characters of Courier Prime Bold at 36px (a monospace font, 0.6em each)
+const TITLE_CHARS = 40;
+
+/** The title on at most two lines, cut at a word with "…" when it is longer */
+function twoLines(title: string): string[] {
+	const lines: string[] = [];
+	let line = '';
+	for (const word of title.split(/\s+/)) {
+		if (line && `${line} ${word}`.length > TITLE_CHARS) {
+			lines.push(line);
+			line = word;
+		} else {
+			line = line ? `${line} ${word}` : word;
+		}
+	}
+	lines.push(line);
+	if (lines.length <= 2) return lines;
+	let second = lines[1];
+	while (second.length + 1 > TITLE_CHARS && second.includes(' ')) second = second.slice(0, second.lastIndexOf(' '));
+	return [lines[0], `${second.replace(/[\s.,:;!?-]+$/, '')}…`];
+}
+
+/**
+ * The blog and topic pages: a table of contents of the three newest issues, newest first,
+ * the latest in orange, like the archive on the page. Before the first article, one line says it is on its way.
+ */
+export function blogImage(issues: ContentsLine[]): SatoriElement {
+	const lines: ContentsLine[] =
+		issues.length > 0 ? issues.slice(0, 3) : [{ label: 'N°01', title: 'The first issue is on its way.' }];
+	const titles = lines.map((line) => twoLines(line.title));
+	// Three titles on two lines each would run into the footer: tighter rows then
+	const padding = titles.flat().length > 5 ? 12 : 20;
+	const rows = lines.map((line, index) =>
 		box(
-			{ alignItems: 'baseline', padding: '20px 0', borderBottom: `4px dashed ${GREEN}`, fontSize: 36 },
-			box({ width: 176, fontFamily: 'Rubik Mono One', color: latest ? ORANGE_TEXT : GREEN }, number),
-			box({ fontWeight: 700 }, text),
-		);
+			{ alignItems: 'baseline', padding: `${padding}px 0`, borderBottom: `4px dashed ${GREEN}`, fontSize: 36 },
+			box(
+				{ width: 176, flexShrink: 0, fontFamily: 'Rubik Mono One', color: index === 0 ? ORANGE_TEXT : GREEN },
+				line.label,
+			),
+			box({ flexDirection: 'column', fontWeight: 700, lineHeight: 1.2 }, ...titles[index].map((text) => box({}, text))),
+		),
+	);
 	return page(
 		box(
 			{ position: 'absolute', left: 72, right: 72, top: 56, justifyContent: 'space-between', alignItems: 'center' },
@@ -185,9 +225,7 @@ export function blogImage(): SatoriElement {
 		),
 		box(
 			{ position: 'absolute', left: 72, right: 72, top: 150, flexDirection: 'column', borderTop: `6px solid ${INK}` },
-			row('N°01', 'Scrapers that survive', true),
-			row('N°02', "Pipelines that don't lose items"),
-			row('N°03', 'Alerts that tell you once'),
+			...rows,
 		),
 		box(
 			{ position: 'absolute', left: 72, bottom: 44, alignItems: 'center', fontFamily: 'Rubik Mono One', fontSize: 26 },
