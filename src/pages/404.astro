@@ -10,8 +10,10 @@ import { getIssues } from '../utils/issues';
 
 const latest = (await getIssues()).slice(0, 1);
 
-const data = `{
-  "url": "/this-page",
+// The JSON around the URL; the URL itself is filled in by the script below
+const dataStart = `{
+  "url": `;
+const dataEnd = `,
   "status": 404,
   "content": null
 }`;
@@ -31,7 +33,7 @@ const data = `{
 		</div>
 
 		<Frame class="data" label="After · the data" tone="orange" note="the selector found nothing…">
-			<pre><code>{data}</code></pre>
+			<pre><code>{dataStart}<span data-missing-url>"/this-page"</span>{dataEnd}</code></pre>
 		</Frame>
 	</section>
 
@@ -44,6 +46,22 @@ const data = `{
 		)
 	}
 </BaseLayout>
+
+<script>
+	// GitHub Pages serves this one page for every missing address: show the address the reader asked for.
+	// Without JavaScript, "/this-page" stays. Very long addresses are cut so the frame keeps its shape.
+	const url = document.querySelector('[data-missing-url]');
+	if (url) {
+		let path = location.pathname;
+		try {
+			path = decodeURI(path);
+		} catch {
+			// Malformed percent-encoding: keep the raw path
+		}
+		if (path.length > 60) path = `${path.slice(0, 59)}…`;
+		url.textContent = JSON.stringify(path);
+	}
+</script>
 
 <style>
 	/* Mobile first: one centered column, in the middle of the screen.
@@ -88,6 +106,11 @@ const data = `{
 	}
 	.data {
 		display: none;
+	}
+	/* A long address wraps inside the frame instead of scrolling it sideways */
+	.data pre {
+		white-space: pre-wrap;
+		overflow-wrap: anywhere;
 	}
 	.latest {
 		margin-top: 56px;
