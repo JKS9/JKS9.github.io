@@ -1,0 +1,43 @@
+---
+// Link styled as a printed button: ink frame and a solid orange shadow, no blur.
+import type { HTMLAttributes } from 'astro/types';
+
+type Props = HTMLAttributes<'a'> & {
+	href: string;
+	/** Adds an arrow before ("back") or after ("forward") the text */
+	arrow?: 'back' | 'forward';
+};
+
+const { arrow, class: className, ...rest } = Astro.props;
+---
+
+<a class:list={['button', className]} {...rest}>
+	{arrow === 'back' && <span aria-hidden="true">←</span>}
+	<slot />
+	{arrow === 'forward' && <span aria-hidden="true">→</span>}
+</a>
+
+<style>
+	.button {
+		display: inline-flex;
+		align-items: baseline;
+		gap: 0.6em;
+		margin: 0 var(--shadow-offset) var(--shadow-offset) 0;
+		padding: 12px 20px;
+		border: var(--border) solid var(--ink);
+		background: var(--paper);
+		color: var(--ink);
+		font-weight: 700;
+		text-decoration: none;
+		box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--orange);
+		transition:
+			transform 0.12s ease,
+			box-shadow 0.12s ease;
+	}
+	/* Pressed: the button moves onto its shadow */
+	.button:hover {
+		color: var(--ink);
+		transform: translate(3px, 3px);
+		box-shadow: calc(var(--shadow-offset) - 3px) calc(var(--shadow-offset) - 3px) 0 var(--orange);
+	}
+</style>

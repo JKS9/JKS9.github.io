@@ -1,21 +1,150 @@
 ---
-import BaseHead from '../components/BaseHead.astro';
-import Footer from '../components/Footer.astro';
-import Header from '../components/Header.astro';
+import ArrowLink from '../components/ArrowLink.astro';
+import Button from '../components/Button.astro';
+import Frame from '../components/Frame.astro';
+import IssueList from '../components/IssueList.astro';
+import Kicker from '../components/Kicker.astro';
+import Overprint from '../components/Overprint.astro';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getIssues } from '../utils/issues';
+
+const latest = (await getIssues()).slice(0, 1);
+
+const data = `{
+  "url": "/this-page",
+  "status": 404,
+  "content": null
+}`;
 ---
 
-<!doctype html>
-<html lang="en">
-	<head>
-		<BaseHead title="Page not found" description="This page does not exist on the JKS9 site." />
-	</head>
-	<body>
-		<Header />
-		<main>
-			<h1>Page not found</h1>
-			<p>This page does not exist, or it has moved.</p>
-			<p><a href="/">Back to the home page</a> or <a href="/blog/">see all articles</a>.</p>
-		</main>
-		<Footer />
-	</body>
-</html>
+<BaseLayout title="Page not found" description="This page does not exist on the JKS9 site." noindex>
+	<section class="not-found" aria-labelledby="not-found-title">
+		<div class="intro">
+			<Kicker>Error · page not found</Kicker>
+			<Overprint text="404" offset="6px" decorative />
+			<h1 id="not-found-title">This page fell out of the zine.</h1>
+			<p class="lead">The address may have a typo, or the page has moved. Everything else is still here.</p>
+			<div class="actions">
+				<Button class="back" href="/" arrow="back">Back to the cover</Button>
+				<ArrowLink href="/blog/">All issues</ArrowLink>
+			</div>
+		</div>
+
+		<Frame class="data" label="After · the data" tone="orange" note="the selector found nothing…">
+			<pre><code>{data}</code></pre>
+		</Frame>
+	</section>
+
+	{
+		latest.length > 0 && (
+			<section class="latest" aria-labelledby="latest-title">
+				<h2 id="latest-title">Meanwhile, the latest issue</h2>
+				<IssueList issues={latest} center />
+			</section>
+		)
+	}
+</BaseLayout>
+
+<style>
+	/* Mobile first: one centered column, in the middle of the screen.
+	   The "After · the data" frame only shows from 960px, where it fits next to the 404. */
+	.not-found {
+		display: flex;
+		flex-direction: column;
+	}
+	.intro {
+		--overprint-size: clamp(96px, 26vw, 160px);
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 18px;
+		/* The header and the top padding take about 100px: the same space under the block centers it */
+		min-height: calc(100vh - 200px);
+		min-height: calc(100svh - 200px);
+		text-align: center;
+	}
+	h1 {
+		margin: 0;
+		font-size: clamp(22px, 3vw, 34px);
+	}
+	.lead {
+		max-width: 32ch;
+		margin: 0;
+	}
+	/* Full width on a phone, capped on a tablet so the button does not stretch across the screen */
+	.actions {
+		width: 100%;
+		max-width: 420px;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 8px;
+		margin-top: 6px;
+	}
+	.back {
+		align-self: stretch;
+		justify-content: center;
+	}
+	.data {
+		display: none;
+	}
+	.latest {
+		margin-top: 56px;
+		text-align: center;
+	}
+	h2 {
+		margin-bottom: 12px;
+		font-size: 18px;
+		line-height: 1.3;
+	}
+
+	@media (min-width: 640px) {
+		.intro {
+			min-height: calc(100vh - 270px);
+			min-height: calc(100svh - 270px);
+		}
+		h2 {
+			font-size: 20px;
+		}
+	}
+
+	/* Two columns that never wrap: the page goes straight from the centered column to side by side */
+	@media (min-width: 960px) {
+		.not-found {
+			display: grid;
+			grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+			align-items: center;
+			gap: 56px;
+		}
+		.intro {
+			--overprint-size: clamp(120px, 20vw, 250px);
+			min-height: 0;
+			align-items: stretch;
+			gap: 22px;
+			text-align: left;
+		}
+		.lead {
+			max-width: 560px;
+			font-size: 20px;
+		}
+		.actions {
+			width: auto;
+			max-width: none;
+			flex-direction: row;
+			flex-wrap: wrap;
+			gap: 20px 28px;
+			margin-top: 8px;
+		}
+		.back {
+			align-self: auto;
+		}
+		.data {
+			display: block;
+		}
+		.latest {
+			margin-top: 72px;
+			text-align: left;
+		}
+	}
+</style>

@@ -1,0 +1,89 @@
+jks9.dev license
+
+Copyright (c) 2026 JKS9
+
+This repository holds two kinds of material under different terms: the Code,
+which you may reuse with a visible credit (part 1), and the Content, which is
+not licensed (part 2). Parts that come from other authors keep their own
+licenses (part 3).
+
+
+1. CODE: MIT LICENSE WITH A VISIBLE CREDIT
+
+"Code" means every file in this repository except the Content listed in part 2
+and the third-party parts listed in part 3.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of the Code, to deal in the Code without restriction, including without
+limitation the rights to use, copy, modify, merge, publish, distribute,
+sublicense, and/or sell copies of the Code, and to permit persons to whom the
+Code is furnished to do so, subject to the following conditions:
+
+a. The above copyright notice and this permission notice shall be included in
+   all copies or substantial portions of the Code.
+
+b. Every website, theme or template built with the Code, or with a substantial
+   portion of it, must show the credit "Design by JKS9" in the footer of every
+   page, with a link to https://jks9.dev. The credit must be visible and
+   readable, in a size and color at least as legible as the rest of the
+   footer text. The link may carry rel="nofollow". A theme or template must
+   keep this credit in place for the sites built with it.
+
+THE CODE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE CODE OR THE USE OR OTHER DEALINGS IN THE
+CODE.
+
+
+2. CONTENT: ALL RIGHTS RESERVED
+
+"Content" means:
+
+- the articles and their images, in src/content/;
+- the written text of the site: the copy of the pages and components in
+  src/pages/ and src/components/ (headings, paragraphs, notes), and the texts
+  and lists in src/data/;
+- the avatar, src/assets/avatar.jpg;
+- the identity of the author: the name JKS9, the JKS9 logo, the "J9" icon,
+  the share images that show them, and the profile and author details in
+  src/consts.ts.
+
+The Content is not covered by part 1. It may not be copied, republished or
+adapted without written permission from JKS9, except for short quotations
+with a link to the source. A site built with the Code must remove or replace
+all of the Content, and must not suggest that JKS9 made or endorses it,
+apart from the credit required in part 1.
+
+
+3. THIRD-PARTY PARTS
+
+- The site started from the Astro blog template
+  (https://github.com/withastro/astro), under the MIT License. Its notice:
+
+      Copyright (c) 2021 Fred K. Schott
+
+      Permission is hereby granted, free of charge, to any person obtaining a
+      copy of this software and associated documentation files (the
+      "Software"), to deal in the Software without restriction, including
+      without limitation the rights to use, copy, modify, merge, publish,
+      distribute, sublicense, and/or sell copies of the Software, and to
+      permit persons to whom the Software is furnished to do so, subject to
+      the following conditions:
+
+      The above copyright notice and this permission notice shall be included
+      in all copies or substantial portions of the Software.
+
+      THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+      OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+      MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+      IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+      CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+      TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+      SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+- The fonts in src/assets/fonts/ (Rubik Mono One, Courier Prime, Reenie
+  Beanie) are under the SIL Open Font License 1.1. Their licenses are the
+  OFL-*.txt files next to them.

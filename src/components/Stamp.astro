@@ -1,0 +1,64 @@
+---
+// The "N°9, printed in 2 inks" stamp: a tilted green ring over an orange dot screen printed off register.
+// Its size follows --stamp-size (210px by default). Decorative, hidden from screen readers.
+import type { HTMLAttributes } from 'astro/types';
+
+type Props = HTMLAttributes<'span'>;
+
+const { class: className, ...rest } = Astro.props;
+---
+
+<span class:list={['stamp', className]} aria-hidden="true" {...rest}>
+	<span class="dots"></span>
+	<span class="ring">
+		<span class="number">N°9</span>
+		<span class="caption">Printed in 2 inks</span>
+	</span>
+</span>
+
+<style>
+	.stamp {
+		position: relative;
+		display: block;
+		width: var(--stamp-size, 210px);
+		height: var(--stamp-size, 210px);
+	}
+	.dots {
+		position: absolute;
+		inset: 0;
+		border-radius: 50%;
+		background-image: radial-gradient(var(--orange) 2.2px, transparent 2.8px);
+		background-size: 11px 11px;
+		transform: translate(var(--misregistration), var(--misregistration));
+	}
+	.ring {
+		position: absolute;
+		inset: 0;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 4px;
+		border: 4px solid var(--green);
+		border-radius: 50%;
+		background: rgb(255 255 255 / 0.55);
+		transform: rotate(-12deg);
+	}
+	.number {
+		color: var(--green);
+		font-family: var(--font-title);
+		font-size: calc(var(--stamp-size, 210px) * 0.29);
+		line-height: 1;
+	}
+	.caption {
+		/* One line at full size (210px), two lines on the small stamp of the phone intro */
+		max-width: 88%;
+		color: var(--orange-text);
+		font-size: max(12px, calc(var(--stamp-size, 210px) * 0.062));
+		font-weight: 700;
+		letter-spacing: 0.12em;
+		line-height: 1.25;
+		text-align: center;
+		text-transform: uppercase;
+	}
+</style>

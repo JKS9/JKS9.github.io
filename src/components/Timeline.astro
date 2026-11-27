@@ -1,0 +1,169 @@
+---
+// Vertical timeline, oldest step first ("My kit, and when I picked it up" on the About page).
+// Mobile first: years above each step, along a green line with a logo dot per step.
+// From 720px the years get their own column on the left of the line.
+import type { HTMLAttributes } from 'astro/types';
+import type { KitStep } from '../data/about';
+
+type Props = HTMLAttributes<'ol'> & { steps: KitStep[] };
+
+const { steps, class: className, ...rest } = Astro.props;
+---
+
+<ol class:list={['timeline', className]} {...rest}>
+	{
+		steps.map((step) => (
+			<li class:list={['step', { current: step.current }]}>
+				<span class="dot" aria-hidden="true" />
+				<p class="years">{step.years}</p>
+				<div class="body">
+					<h3>{step.title}</h3>
+					<p class="text">{step.text}</p>
+					<ul class="stack" aria-label="Stack">
+						{step.stack.map((tech) => (
+							<li>{tech}</li>
+						))}
+					</ul>
+				</div>
+			</li>
+		))
+	}
+</ol>
+
+<style>
+	.timeline {
+		--years-width: 200px;
+		--years-gap: 28px;
+		margin: 0 0 0 6px;
+		padding: 0;
+		list-style: none;
+	}
+	.step {
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		padding: 0 0 32px 26px;
+		border-left: var(--border) solid var(--green);
+	}
+	.step:last-child {
+		padding-bottom: 8px;
+	}
+	/* The logo dots: orange printed off register under the green one, centered on the line */
+	/* Centered on the 3px line: the line runs from -3px to 0 in the step's padding box */
+	.dot {
+		position: absolute;
+		top: 1px;
+		left: -12px;
+		width: 20px;
+		height: 20px;
+	}
+	.dot::before,
+	.dot::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		border-radius: 50%;
+		mix-blend-mode: multiply;
+	}
+	.dot::before {
+		background: var(--orange);
+		transform: translate(3px, 2px);
+	}
+	.dot::after {
+		background: var(--green);
+	}
+	.years {
+		margin: 0;
+		color: var(--orange-text);
+		font-family: var(--font-title);
+		font-size: 15px;
+		line-height: 1.5;
+	}
+	.body {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+	h3 {
+		margin: 0;
+		font-size: 17px;
+		line-height: 1.35;
+	}
+	.text {
+		margin: 0;
+		font-size: 16px;
+	}
+	.stack {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+		margin: 4px 0 0;
+		padding: 0;
+		list-style: none;
+	}
+	.stack li {
+		padding: 0 7px;
+		border: var(--border-thin) solid var(--green);
+		font-size: 14px;
+		line-height: 1.8;
+	}
+	/* The period he is in now */
+	.current .stack {
+		gap: 10px;
+		padding: 0 6px 6px 0;
+	}
+	.current .stack li {
+		border-color: var(--ink);
+		box-shadow: 3px 3px 0 var(--orange);
+	}
+
+	@media (min-width: 640px) {
+		h3 {
+			font-size: 20px;
+		}
+		.text {
+			font-size: 17px;
+		}
+		.stack li {
+			padding-inline: 8px;
+			font-size: 15px;
+		}
+	}
+
+	/* Years in their own column; the line and the dots move to the body */
+	@media (min-width: 720px) {
+		.timeline {
+			margin-left: 0;
+		}
+		.step {
+			display: grid;
+			grid-template-columns: var(--years-width) minmax(0, 1fr);
+			column-gap: var(--years-gap);
+			padding: 0;
+			border-left: none;
+		}
+		.step:last-child {
+			padding-bottom: 0;
+		}
+		/* The line is now the body's left border: its center is 1.5px after the start of the body */
+		.dot {
+			top: 3px;
+			left: calc(var(--years-width) + var(--years-gap) - 9.5px);
+			width: 22px;
+			height: 22px;
+		}
+		.years {
+			font-size: 19px;
+			line-height: 1.4;
+		}
+		.body {
+			gap: 10px;
+			padding: 0 0 44px 36px;
+			border-left: var(--border) solid var(--green);
+		}
+		.step:last-child .body {
+			padding-bottom: 8px;
+		}
+	}
+</style>

@@ -1,0 +1,217 @@
+---
+// The archive: the topic filters, then every issue grouped by year, newest first.
+// Shared by /blog/ (all issues) and /blog/topic/<topic>/ (the issues of one topic).
+// Mobile first: on a phone the filters go under their label; from 640px, on the same line.
+import type { Issue, Topic } from '../utils/issues';
+import HandNote from './HandNote.astro';
+import IssueList from './IssueList.astro';
+import Kicker from './Kicker.astro';
+import Overprint from './Overprint.astro';
+
+interface Props {
+	/** The issues to show, newest first */
+	issues: Issue[];
+	/** Every topic of the site, for the filters */
+	topics: Topic[];
+	/** The topic being shown. None on /blog/. */
+	current?: Topic;
+}
+
+const { issues, topics, current } = Astro.props;
+
+// UTC, like the dates in the frontmatter: a Dec 31 article never lands in the next year
+const yearOf = (issue: Issue) => issue.post.data.pubDate.getUTCFullYear();
+const years = [...new Set(issues.map(yearOf))];
+const byYear = years.map((year) => ({
+	year,
+	issues: issues.filter((issue) => yearOf(issue) === year),
+}));
+---
+
+<div class="archive">
+	<section class="hero" aria-labelledby="archive-title">
+		<Kicker>The archive · {current ? current.name : 'newest first'}</Kicker>
+		<Overprint as="h1" id="archive-title" text={current ? `${current.name} issues` : 'All issues'} offset="4px" />
+		<p class="lead">
+			Web scraping in production, one issue every two weeks or so. New issues by <a href="/rss/">RSS</a>.
+		</p>
+	</section>
+
+	{
+		topics.length > 0 && (
+			<nav class="topics" aria-label="Topics">
+				<span class="topics-label">Topics:</span>
+				<ul>
+					<li>
+						<a class="chip" href="/blog/" aria-current={current ? undefined : 'page'}>
+							All
+						</a>
+					</li>
+					{topics.map((topic) => (
+						<li>
+							<a class="chip" href={topic.url} aria-current={current?.slug === topic.slug ? 'page' : undefined}>
+								{topic.name}
+							</a>
+						</li>
+					))}
+				</ul>
+			</nav>
+		)
+	}
+
+	{
+		byYear.length > 0 ? (
+			byYear.map(({ year, issues: yearIssues }, index) => (
+				<section class="year" aria-labelledby={`year-${year}`}>
+					<h2 id={`year-${year}`}>{year}</h2>
+					<IssueList issues={yearIssues} summary rule={false} withYear={false} />
+					{!current && index === byYear.length - 1 && (
+						<HandNote class="origin" tilt={-2}>
+							↑ where it all started
+						</HandNote>
+					)}
+				</section>
+			))
+		) : (
+			<p class="empty">The first issue is on its way.</p>
+		)
+	}
+</div>
+
+<style>
+	.archive {
+		display: flex;
+		flex-direction: column;
+		gap: 36px;
+	}
+	.hero {
+		/* 40px at most on the narrowest phones (280px), so "ISSUES" never runs past the edge */
+		--overprint-size: clamp(40px, 8vw, 104px);
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
+	}
+	.lead {
+		max-width: 680px;
+		margin: 0;
+	}
+
+	/* Topic filters: stamps in alternating inks, slightly tilted. The current one is filled. */
+	.topics {
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+	}
+	.topics-label {
+		font-size: 15px;
+	}
+	ul {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 10px;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+	.chip {
+		display: inline-block;
+		padding: 10px 12px;
+		border: var(--border) solid var(--green);
+		color: var(--green);
+		font-family: var(--font-title);
+		font-size: 12px;
+		line-height: 1.6;
+		text-decoration: none;
+	}
+	li:nth-child(4n + 2) .chip {
+		transform: rotate(-2deg);
+	}
+	li:nth-child(4n + 3) .chip {
+		border-color: var(--orange-text);
+		color: var(--orange-text);
+		transform: rotate(1.5deg);
+	}
+	li:nth-child(4n) .chip {
+		transform: rotate(-1deg);
+	}
+	li:nth-child(4n + 5) .chip {
+		border-color: var(--orange-text);
+		color: var(--orange-text);
+		transform: rotate(2deg);
+	}
+	.topics .chip:hover {
+		border-color: var(--ink);
+		color: var(--ink);
+	}
+	.topics .chip[aria-current='page'],
+	.topics .chip[aria-current='page']:hover {
+		border-color: var(--green);
+		background: var(--green);
+		color: var(--paper);
+		transform: none;
+	}
+
+	/* One section per year, the year in orange on a thick rule */
+	.year {
+		display: flex;
+		flex-direction: column;
+	}
+	h2 {
+		margin: 0;
+		padding-top: 10px;
+		border-top: var(--border) solid var(--ink);
+		color: var(--orange-text);
+		font-size: 18px;
+		letter-spacing: 0.1em;
+	}
+	.origin {
+		--hand-size: 28px;
+		align-self: flex-start;
+		margin-top: 14px;
+	}
+	.empty {
+		margin: 0;
+		padding-top: 20px;
+		border-top: var(--border) solid var(--ink);
+	}
+
+	@media (min-width: 640px) {
+		.archive {
+			gap: 48px;
+		}
+		.hero {
+			gap: 20px;
+		}
+		.lead {
+			font-size: 20px;
+		}
+		.topics {
+			flex-direction: row;
+			flex-wrap: wrap;
+			align-items: center;
+			gap: 14px;
+		}
+		.topics-label {
+			margin-right: 4px;
+			font-size: 16px;
+		}
+		ul {
+			gap: 14px;
+		}
+		/* 44px tall: still a comfortable touch target */
+		.chip {
+			display: inline-flex;
+			align-items: center;
+			min-height: 44px;
+			padding: 6px 14px;
+			font-size: 13px;
+		}
+		h2 {
+			font-size: 20px;
+		}
+		.origin {
+			--hand-size: 30px;
+		}
+	}
+</style>

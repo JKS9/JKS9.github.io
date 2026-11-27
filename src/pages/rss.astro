@@ -1,0 +1,681 @@
+---
+// RSS page: every "RSS" link of the site lands here, never on the XML itself, which a browser shows as code.
+// The two feeds with a "Copy link" button, what RSS is (the raw feed, then the same issue in a reader),
+// how to subscribe. Mobile first: one column on a phone; the cards go side by side when two fit
+// (about 1000px), the before / after from 960px like on the home.
+import Frame from '../components/Frame.astro';
+import HandNote from '../components/HandNote.astro';
+import Kicker from '../components/Kicker.astro';
+import Overprint from '../components/Overprint.astro';
+import { PROFILES, RSS_FEEDS, SITE_TITLE, websiteJsonLd } from '../consts';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { FEED_SIZE } from '../utils/feed';
+import { getIssues } from '../utils/issues';
+
+const description =
+	'Follow JKS9 on web scraping in production by RSS: the full text or only the summaries. No account, no e-mail, no tracking. Subscribe in 3 steps.';
+
+const jsonLd = {
+	'@context': 'https://schema.org',
+	'@graph': [
+		{
+			'@type': 'WebPage',
+			'@id': new URL('/rss/#page', Astro.site).href,
+			url: new URL('/rss/', Astro.site).href,
+			name: 'RSS feed',
+			description,
+			inLanguage: 'en',
+			isPartOf: { '@id': new URL('/#website', Astro.site).href },
+		},
+		websiteJsonLd(Astro.site),
+	],
+};
+
+const feeds = [
+	{
+		id: 'full',
+		tag: 'Full text',
+		title: 'The whole issue',
+		text: 'Every issue in full, code blocks included. Read it in your reader without opening the site.',
+		path: RSS_FEEDS.full.path,
+	},
+	{
+		id: 'summary',
+		tag: 'Summary only',
+		title: 'Title and "In short"',
+		text: 'The title and the short summary of each issue, with a link to read the rest on the site. Lighter if you skim.',
+		path: RSS_FEEDS.summary.path,
+	},
+].map((feed) => ({ ...feed, url: new URL(feed.path, Astro.site).href, origin: new URL('/', Astro.site).href }));
+
+// Cuts a text at the last whole word that fits, and marks the cut with "…"
+const shorten = (text: string, max: number) => {
+	if (text.length <= max) return text;
+	const end = text.slice(0, max + 1).lastIndexOf(' ');
+	return `${text.slice(0, end > 0 ? end : max).replace(/[.,:;!?]+$/, '')}…`;
+};
+
+// "What is RSS?" shows the latest issue twice: as the feed has it, then as a reader shows it
+const latest = (await getIssues())[0]?.post.data;
+const utc = { timeZone: 'UTC' } as const;
+const example = latest
+	? {
+			title: latest.title,
+			summary: shorten(latest.summary ?? latest.description, 130),
+			xmlTitle: shorten(latest.title, 16),
+			xmlDate: latest.pubDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', ...utc }),
+			readerDate: latest.pubDate.toLocaleDateString('en-us', { month: 'short', day: 'numeric', year: 'numeric', ...utc }),
+		}
+	: {
+			title: 'N°01 is on its way',
+			summary: 'Subscribe now and the first issue shows up here on the day it comes out.',
+			xmlTitle: 'N°01…',
+			xmlDate: '…',
+			readerDate: 'coming soon',
+		};
+
+const xml = `<rss version="2.0">
+  <channel>
+    <title>${SITE_TITLE}</title>
+    <item>
+      <title>${example.xmlTitle}</title>
+      <link>${new URL('/', Astro.site).href}…</link>
+      <pubDate>${example.xmlDate}</pubDate>
+    </item>`;
+
+const devto = PROFILES.find((profile) => profile.name === 'dev.to')?.url ?? '';
+---
+
+<BaseLayout title="RSS feed" description={description} jsonLd={jsonLd}>
+	<div class="rss-page">
+		<section class="hero" aria-labelledby="rss-title">
+			<Kicker>Subscribe · no newsletter</Kicker>
+			<Overprint as="h1" id="rss-title" class="title" text="RSS feed" />
+			<p class="lead">
+				No account, no e-mail, no tracking. Add one link to a feed reader and every new issue shows up there on the day it
+				comes out.
+			</p>
+		</section>
+
+		<section class="pick" aria-labelledby="pick-title">
+			<div class="pick-head">
+				<h2 id="pick-title">Pick your feed</h2>
+				<HandNote class="pick-note" tilt={-3}>
+					<span class="left">← </span>same issues, same day<span class="down"> ↓</span>
+				</HandNote>
+			</div>
+			<div class="feeds">
+				{
+					feeds.map((feed, index) => (
+						<article class:list={['feed', { primary: index === 0 }]} aria-labelledby={`feed-${feed.id}`}>
+							<span class="feed-tag">{feed.tag}</span>
+							<h3 id={`feed-${feed.id}`}>{feed.title}</h3>
+							<p>{feed.text}</p>
+							<div class="copy-row">
+								{/* On one line: a line break here would show up as a space in the address */}
+								<code class="feed-url" id={`url-${feed.id}`}>{feed.origin}<wbr />{feed.path.slice(1)}</code>
+								<button class="copy" type="button" data-copy={feed.url} data-target={`url-${feed.id}`}>
+									<span class="copy-labels">
+										<span class="idle">Copy link</span>
+										<span class="done">
+											Copied <span aria-hidden="true">✓</span>
+										</span>
+									</span>
+									<span class="sr-only"> ({feed.tag.toLowerCase()} feed)</span>
+								</button>
+							</div>
+							<a class="raw" href={feed.path}>
+								Open the raw feed <span aria-hidden="true">↗</span>
+							</a>
+							{index === 0 && (
+								<HandNote class="favorite" tilt={3}>
+									most readers want this one
+								</HandNote>
+							)}
+						</article>
+					))
+				}
+			</div>
+			<p class="sr-only" id="copy-status" aria-live="polite"></p>
+			<!-- Without JavaScript the buttons could not copy anything: the address stays there to copy by hand -->
+			<noscript><style is:inline>.copy { display: none !important; }</style></noscript>
+		</section>
+
+		<section class="what" aria-labelledby="what-title">
+			<h2 id="what-title">What is RSS?</h2>
+			<p class="text">
+				A feed is a plain file on this site that lists the latest issues. A feed reader is an app that checks that file
+				for you and shows what's new. You follow sites without giving them your e-mail, and you leave by deleting one
+				line.
+			</p>
+			<div class="frames">
+				<Frame class="browser" label="What your browser shows" note="made for apps, not eyes" noteTilt={-5}>
+					<pre tabindex="0"><code>{xml}</code></pre>
+				</Frame>
+				<svg class="arrow arrow-down" aria-hidden="true" width="40" height="48" viewBox="0 0 40 48">
+					<path d="M18 4 C 6 16, 30 26, 20 40"></path>
+					<path d="M10 32 L 20 42 L 28 31"></path>
+				</svg>
+				<svg class="arrow arrow-right" aria-hidden="true" width="64" height="40" viewBox="0 0 64 40">
+					<path d="M4 22 C 18 8, 34 34, 52 18"></path>
+					<path d="M42 12 L 54 17 L 48 29"></path>
+				</svg>
+				<Frame label="What your reader shows" tone="orange" note="same issue, readable" noteTilt={3}>
+					<div class="reader">
+						<p class="reader-meta">
+							<span class="unread" aria-hidden="true"></span>
+							{SITE_TITLE} · {example.readerDate} · unread
+						</p>
+						<p class="reader-title">{example.title}</p>
+						<p class="reader-summary">{example.summary}</p>
+					</div>
+				</Frame>
+			</div>
+			<p class="clicked">
+				Clicked a feed link and got a page of code? That's normal. Copy the link instead and paste it into a reader.
+			</p>
+		</section>
+
+		<section class="steps" aria-labelledby="steps-title">
+			<h2 id="steps-title">Subscribe in 3 steps</h2>
+			<ol>
+				<li>
+					<span class="number" aria-hidden="true">01</span>
+					<p>
+						<strong>Pick a reader.</strong> Free ones: NetNewsWire (Mac, iPhone), Feedly or Inoreader (web, Android), Thunderbird
+						(desktop). Self-hosted: Miniflux, FreshRSS.
+					</p>
+				</li>
+				<li>
+					<span class="number" aria-hidden="true">02</span>
+					<p><strong>Copy a feed link</strong> from one of the two cards above.</p>
+				</li>
+				<li>
+					<span class="number" aria-hidden="true">03</span>
+					<p>
+						<strong>Paste it</strong> into the reader's "Add feed" or "Subscribe" field. New issues show up on their own.
+					</p>
+				</li>
+			</ol>
+		</section>
+
+		<section class="know" aria-labelledby="know-title">
+			<div class="dots" aria-hidden="true"></div>
+			<h2 id="know-title">Good to know</h2>
+			<ul>
+				<li>One issue every two weeks or so. Nothing else goes in the feed.</li>
+				<li>The feed holds the latest {FEED_SIZE} issues. The older ones are all in the <a href="/blog/">blog</a>.</li>
+				<li>No account, no tracking pixel: I never see who subscribes.</li>
+				<li>Every issue is also posted on <a href={devto}>dev.to</a>, if that's where you read.</li>
+			</ul>
+		</section>
+	</div>
+</BaseLayout>
+
+<script>
+	// Copies a feed address. Without clipboard access (an old browser, a refused permission),
+	// it selects the address instead, so Ctrl+C or ⌘C copies it.
+	const status = document.getElementById('copy-status');
+	const announce = (message: string) => {
+		if (!status) return;
+		// Emptied first, so the same message is announced again on a second click
+		status.textContent = '';
+		setTimeout(() => (status.textContent = message), 50);
+	};
+	const timers = new WeakMap<HTMLButtonElement, number>();
+
+	for (const button of document.querySelectorAll<HTMLButtonElement>('button[data-copy]')) {
+		button.addEventListener('click', async () => {
+			const url = button.dataset.copy ?? '';
+			try {
+				await navigator.clipboard.writeText(url);
+				button.classList.add('copied');
+				clearTimeout(timers.get(button));
+				timers.set(
+					button,
+					window.setTimeout(() => button.classList.remove('copied'), 2500),
+				);
+				announce(`Link copied: ${url}`);
+			} catch {
+				const address = document.getElementById(button.dataset.target ?? '');
+				const selection = window.getSelection();
+				if (!address || !selection) return;
+				const range = document.createRange();
+				range.selectNodeContents(address);
+				selection.removeAllRanges();
+				selection.addRange(range);
+				announce('Link selected: press Ctrl+C, or ⌘C on a Mac, to copy it.');
+			}
+		});
+	}
+</script>
+
+<style>
+	.rss-page {
+		display: flex;
+		flex-direction: column;
+		gap: 44px;
+	}
+	.rss-page h2 {
+		margin: 0;
+		font-size: 22px;
+		line-height: 1.3;
+	}
+	.rss-page p {
+		margin: 0;
+	}
+
+	/* Title */
+	.hero {
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
+	}
+	.title {
+		/* "RSS FEED" is 6.8em wide: 52px from a 400px screen, smaller below so it stays on one line
+		   (with room for the offset layer and a classic scrollbar) */
+		--overprint-size: min(52px, 13.5vw - 4px);
+		--misregistration: 4px;
+	}
+	.lead {
+		max-width: 680px;
+	}
+
+	/* Pick your feed: two cards. The first one, the one most readers want, gets the ink frame and the shadow. */
+	.pick {
+		display: flex;
+		flex-direction: column;
+		gap: 24px;
+	}
+	.pick-head {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+	}
+	.pick-note {
+		--hand-size: 28px;
+		align-self: flex-start;
+		transform-origin: left center;
+	}
+	.pick-note .left {
+		display: none;
+	}
+	.feeds {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: stretch;
+		gap: 40px 48px;
+	}
+	.feed {
+		position: relative;
+		flex: 1 1 440px;
+		min-width: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 14px;
+		/* Both cards keep the room of the shadow, so they stay the same width */
+		margin-right: var(--shadow-offset);
+		padding: 22px 18px;
+		border: var(--border) solid var(--green);
+	}
+	.feed.primary {
+		border-color: var(--ink);
+		box-shadow: var(--shadow-offset) var(--shadow-offset) 0 var(--orange);
+	}
+	.feed-tag {
+		align-self: flex-start;
+		padding: 4px 10px;
+		background: var(--orange-text);
+		color: var(--paper);
+		font-family: var(--font-title);
+		font-size: 12px;
+		letter-spacing: 0.1em;
+	}
+	.primary .feed-tag {
+		background: var(--green);
+	}
+	.feed h3 {
+		margin: 0;
+		font-size: 19px;
+		line-height: 1.3;
+	}
+	/* The address and the button share a line when both fit; otherwise each takes the whole width */
+	.copy-row {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: stretch;
+		gap: 14px 12px;
+		margin-top: auto;
+	}
+	/* 270px holds "https://jks9.dev/rss.xml" on one line at 16px; if the address must break, it breaks
+	   after the domain (<wbr>), never in the middle of a word */
+	.feed-url {
+		flex: 999 1 270px;
+		min-width: 0;
+		padding: 10px 12px;
+		border: var(--border-thin) dashed var(--green);
+		background: none;
+		color: var(--ink);
+		font-size: 15px;
+		overflow-wrap: anywhere;
+	}
+	.copy {
+		flex: 1 0 auto;
+		min-height: 48px;
+		padding: 10px 16px;
+		border: var(--border) solid var(--green);
+		background: var(--paper);
+		color: var(--green);
+		font-family: var(--font-title);
+		font-size: 13px;
+		letter-spacing: 0.06em;
+		cursor: pointer;
+	}
+	.primary .copy {
+		background: var(--green);
+		color: var(--paper);
+	}
+	.copy:hover {
+		border-color: var(--orange-text);
+		color: var(--orange-text);
+	}
+	.primary .copy:hover {
+		background: var(--orange-text);
+		color: var(--paper);
+	}
+	/* Both labels in the same cell: the button keeps the width of the longer one, nothing moves */
+	.copy-labels {
+		display: inline-grid;
+	}
+	.copy-labels > span {
+		grid-area: 1 / 1;
+	}
+	.done,
+	.copy.copied .idle {
+		visibility: hidden;
+	}
+	.copy.copied .done {
+		visibility: visible;
+	}
+	.raw {
+		align-self: flex-start;
+		padding: 10px 0;
+		font-weight: 700;
+	}
+	.favorite {
+		--hand-size: 26px;
+		position: absolute;
+		top: -20px;
+		right: 12px;
+		padding: 0 6px;
+		background: var(--paper);
+		line-height: 1.1;
+	}
+
+	/* What is RSS? The raw feed, an arrow, the same issue in a reader. Stacked on a phone. */
+	.what {
+		display: flex;
+		flex-direction: column;
+		gap: 20px;
+	}
+	.what .text {
+		max-width: 760px;
+	}
+	.frames {
+		display: flex;
+		flex-direction: column;
+		gap: 20px;
+	}
+	/* The gap alone spaces the frames: the arrow sits halfway between them when they are stacked */
+	.frames > :global(.frame) {
+		margin-bottom: 0;
+	}
+	.browser pre {
+		color: var(--green);
+	}
+	.arrow {
+		flex: 0 0 auto;
+		fill: none;
+		stroke: var(--orange-text);
+		stroke-width: 4;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+	}
+	.arrow-down {
+		align-self: center;
+	}
+	.arrow-right {
+		display: none;
+	}
+	.reader {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		padding: 16px 16px 26px;
+	}
+	.reader-meta {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		color: var(--green);
+		font-size: 14px;
+	}
+	.unread {
+		flex: 0 0 auto;
+		width: 10px;
+		height: 10px;
+		border-radius: 50%;
+		background: var(--orange);
+	}
+	.reader-title {
+		font-size: 18px;
+		font-weight: 700;
+		line-height: 1.35;
+	}
+	.reader-summary {
+		font-size: 15px;
+		line-height: 1.5;
+	}
+	/* Clear of the note hanging under the last frame */
+	.what .clicked {
+		margin-top: 16px;
+		font-size: 15px;
+		line-height: 1.5;
+	}
+
+	/* Subscribe in 3 steps */
+	.steps {
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
+	}
+	.steps ol {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+		border-top: var(--border) solid var(--ink);
+	}
+	.steps li {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+		padding: 16px 0;
+		border-bottom: var(--border-thin) dashed var(--green);
+	}
+	.number {
+		color: var(--green);
+		font-family: var(--font-title);
+		font-size: 18px;
+	}
+	li:first-child .number {
+		color: var(--orange-text);
+	}
+
+	/* Good to know: green frame with a dot patch spilling over its corner */
+	.know {
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+		padding: 24px 20px;
+		border: var(--border) solid var(--green);
+	}
+	.dots {
+		position: absolute;
+		top: -12px;
+		right: -8px;
+		width: 96px;
+		height: 72px;
+		background-image: radial-gradient(var(--orange) 2px, transparent 2.6px);
+		background-size: 10px 10px;
+		mix-blend-mode: multiply;
+	}
+	.rss-page .know h2 {
+		position: relative;
+		font-size: 20px;
+	}
+	.know ul {
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		margin: 0;
+		padding-left: 20px;
+	}
+
+	@media (min-width: 640px) {
+		.rss-page {
+			gap: 72px;
+		}
+		.rss-page h2 {
+			font-size: 28px;
+		}
+		.hero {
+			gap: 20px;
+		}
+		.title {
+			--overprint-size: clamp(52px, 8vw, 104px);
+			--misregistration: 5px;
+		}
+		.lead {
+			font-size: 20px;
+		}
+		.pick {
+			gap: 28px;
+		}
+		/* The note goes next to the title and points at it */
+		.pick-head {
+			flex-direction: row;
+			flex-wrap: wrap;
+			align-items: baseline;
+			gap: 8px 20px;
+		}
+		.pick-note {
+			--hand-size: 32px;
+		}
+		.pick-note .left {
+			display: inline;
+		}
+		.pick-note .down {
+			display: none;
+		}
+		.feed {
+			--shadow-offset: 8px;
+			gap: 16px;
+			padding: 28px;
+		}
+		.feed-tag {
+			padding: 4px 12px;
+			font-size: 13px;
+		}
+		.feed h3 {
+			font-size: 22px;
+		}
+		.copy-row {
+			gap: 12px;
+		}
+		.feed-url {
+			padding: 12px 14px;
+			font-size: 16px;
+		}
+		.copy {
+			padding-inline: 18px;
+		}
+		.raw {
+			padding: 6px 0;
+		}
+		.favorite {
+			--hand-size: 30px;
+			top: -22px;
+			right: 20px;
+		}
+		.what {
+			gap: 28px;
+		}
+		.reader {
+			padding: 24px;
+		}
+		.reader-meta {
+			font-size: 15px;
+		}
+		.reader-title {
+			font-size: 20px;
+		}
+		.reader-summary {
+			font-size: 16px;
+		}
+		.what .clicked {
+			font-size: 16px;
+		}
+		.steps {
+			gap: 20px;
+		}
+		/* The number in its own column */
+		.steps li {
+			flex-direction: row;
+			flex-wrap: wrap;
+			align-items: baseline;
+			gap: 6px 24px;
+			padding: 20px 0;
+		}
+		.number {
+			flex: 0 0 84px;
+			font-size: 22px;
+		}
+		.steps li p {
+			flex: 1 1 520px;
+			min-width: 0;
+		}
+		.know {
+			gap: 14px;
+			padding: 40px;
+		}
+		.dots {
+			top: -18px;
+			right: -18px;
+			width: 150px;
+			height: 110px;
+		}
+		.rss-page .know h2 {
+			font-size: 24px;
+		}
+		.know ul {
+			padding-left: 22px;
+		}
+	}
+
+	/* Before and after side by side, the arrow pointing right */
+	@media (min-width: 960px) {
+		.frames {
+			display: grid;
+			grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+			align-items: center;
+		}
+		.arrow-down {
+			display: none;
+		}
+		.arrow-right {
+			display: block;
+		}
+	}
+</style>

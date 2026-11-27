@@ -22,3 +22,6 @@ pnpm-debug.log*
 
 # jetbrains setting folder
 .idea/
+
+# Local test article (a draft with text not yet validated for publication): never committed
+src/content/blog/article-test.md

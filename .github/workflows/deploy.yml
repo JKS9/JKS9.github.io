@@ -3,25 +3,44 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
+  # Rebuilt every morning: "Latest on GitHub" on /about/ stays fresh, and an article pushed
+  # in advance goes live on its pubDate (GitHub pauses scheduled runs after 60 days without a push)
+  schedule:
+    - cron: "23 5 * * *"
   workflow_dispatch:
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
+# Nothing by default: each job asks only for what it needs
+permissions: {}
+
+# A push and the daily rebuild never deploy at the same time; a running deployment is never cancelled
+concurrency:
+  group: pages
+  cancel-in-progress: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout your repository using git
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: Install, build, and upload your site
         uses: withastro/action@v6
+        with:
+          node-version: 24
+        env:
+          # Read-only token for the GitHub API calls made during the build (src/utils/github.ts)
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -29,3 +48,19 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
+
+  # Tells Bing and the other IndexNow engines that pages changed, after every deployment:
+  # a push, or the daily rebuild that may publish an article scheduled for today. One request.
+  indexnow:
+    needs: deploy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          sparse-checkout: scripts
+      - name: Ping IndexNow
+        run: node scripts/indexnow.mjs

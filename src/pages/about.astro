@@ -1,37 +1,401 @@
 ---
-import BaseHead from '../components/BaseHead.astro';
-import Footer from '../components/Footer.astro';
-import Header from '../components/Header.astro';
-import { personJsonLd } from '../consts';
+// About page: who JKS9 is, what he believes about scraping, his stack since 2018 and his latest GitHub work.
+// Mobile first: one column on a phone. From 640px the beliefs put their number, title and text side by side,
+// from 720px the timeline gets a column for the years.
+import Avatar from '../components/Avatar.astro';
+import GitHubActivity from '../components/GitHubActivity.astro';
+import HandNote from '../components/HandNote.astro';
+import Kicker from '../components/Kicker.astro';
+import Overprint from '../components/Overprint.astro';
+import Timeline from '../components/Timeline.astro';
+import { personJsonLd, PROFILES, websiteJsonLd } from '../consts';
+import { BELIEFS, KIT, splitOnMark } from '../data/about';
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+// Answers "who is JKS9?" in one sentence, for search results and AI assistants (under 160 characters)
+const description =
+	'JKS9 is a back-end developer who writes about web scraping in production. His beliefs about scraping, his stack since 2018, his latest open-source work.';
+
+// Bump when the content of this page changes (beliefs, timeline)
+const updated = new Date('2026-11-27');
 
 const jsonLd = {
 	'@context': 'https://schema.org',
-	'@type': 'ProfilePage',
-	url: new URL('/about/', Astro.site).href,
-	mainEntity: personJsonLd(Astro.site),
+	'@graph': [
+		{
+			'@type': 'ProfilePage',
+			'@id': new URL('/about/#page', Astro.site).href,
+			url: new URL('/about/', Astro.site).href,
+			name: 'About JKS9',
+			description,
+			inLanguage: 'en',
+			dateModified: updated.toISOString(),
+			isPartOf: { '@id': new URL('/#website', Astro.site).href },
+			mainEntity: personJsonLd(Astro.site),
+		},
+		websiteJsonLd(Astro.site),
+	],
 };
+
+// Where to reach JKS9, in public
+const profileUrl = (name: string) => PROFILES.find((profile) => profile.name === name)?.url ?? '';
+const contacts = [
+	{ label: 'dev.to', url: profileUrl('dev.to') },
+	{ label: 'u/JKS9_dev', url: profileUrl('Reddit') },
+];
+
+const firstYear = KIT[0]?.years.slice(0, 4);
 ---
 
-<!doctype html>
-<html lang="en">
-	<head>
-		<BaseHead title="About" description="JKS9 is a back-end developer specialized in Node.js, NestJS and web scraping." />
-		<script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
-	</head>
-	<body>
-		<Header />
-		<main>
-			<h1>About</h1>
-			<p>
-				I'm JKS9, a back-end developer specialized in Node.js, NestJS and web scraping. Web
-				scraping is the part I never get tired of: turning messy websites into clean, structured
-				data, and keeping it working in production.
-			</p>
-			<p>
-				You can find my code on <a href="https://github.com/JKS9">GitHub</a> and my answers on
-				<a href="https://www.reddit.com/user/JKS9_dev/">Reddit</a>.
-			</p>
-		</main>
-		<Footer />
-	</body>
-</html>
+<BaseLayout title="About JKS9" description={description} jsonLd={jsonLd}>
+	<div class="about">
+		<section class="cover" aria-labelledby="about-title">
+			<Kicker class="cover-kicker">The editor's page</Kicker>
+			<Overprint as="h1" id="about-title" class="title" text="Hello, I'm JKS9" />
+			<Avatar
+				class="cover-avatar"
+				size={280}
+				sizes="(min-width: 960px) 280px, (min-width: 640px) 180px, 104px"
+				variant="dots"
+				priority
+			/>
+			<div class="intro">
+				<p>
+					I'm a back-end developer, and <span class="highlight">web scraping</span> is the part I never get tired of.
+					Logins, JavaScript-heavy pages, infinite scroll, rate limits, selectors that move every other week: the trickier
+					the source, the more fun it gets.
+				</p>
+				<p>
+					Getting the data once is the easy part. What I care about is what comes after: a system that runs on its own
+					for months, tells me fast when it breaks, never loses data, and takes minutes to fix. That is what this zine is
+					about.
+				</p>
+			</div>
+		</section>
+
+		<section class="beliefs" aria-labelledby="beliefs-title">
+			<h2 id="beliefs-title">What I believe about scraping</h2>
+			<ol>
+				{
+					BELIEFS.map((belief, index) => {
+						const [before, mark, after] = splitOnMark(belief);
+						return (
+							<li>
+								<span class="number" aria-hidden="true">
+									{String(index + 1).padStart(2, '0')}
+								</span>
+								<p class="belief">
+									{before}
+									<span class="highlight">{mark}</span>
+									{after}
+								</p>
+								<p class="why">{belief.text}</p>
+							</li>
+						);
+					})
+				}
+			</ol>
+		</section>
+
+		<section class="contact" aria-labelledby="contact-title">
+			<div class="contact-text">
+				<h2 id="contact-title">Contact me</h2>
+				<p>
+					A question about scraping, a source that fights back, another way to see it? Write to me on dev.to or Reddit. I
+					answer in public, so the next person with the same problem finds it too.
+				</p>
+			</div>
+			<div class="contact-links">
+				{
+					contacts.map((link) => (
+						<a href={link.url}>
+							{link.label} <span aria-hidden="true">→</span>
+						</a>
+					))
+				}
+			</div>
+		</section>
+
+		<section class="kit" aria-labelledby="kit-title">
+			<div class="kit-head">
+				<h2 id="kit-title">My kit, and when I picked it up</h2>
+				<HandNote class="kit-note"><span class="left">← </span>since {firstYear}</HandNote>
+			</div>
+			<Timeline steps={KIT} aria-labelledby="kit-title" />
+		</section>
+
+		<GitHubActivity />
+	</div>
+</BaseLayout>
+
+<style>
+	.about {
+		display: flex;
+		flex-direction: column;
+		gap: 64px;
+	}
+	.about h2 {
+		margin: 0;
+		font-size: 21px;
+		line-height: 1.3;
+	}
+
+	/* Cover. On a phone and a tablet the avatar sits next to the title, the intro runs full width
+	   underneath; from 960px it gets its own column, centered next to the whole block. */
+	.cover {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto;
+		grid-template-areas:
+			'kicker kicker'
+			'title avatar'
+			'intro intro';
+		align-items: center;
+		gap: 20px 14px;
+	}
+	.cover-kicker {
+		grid-area: kicker;
+	}
+	.title {
+		/* 34px on a usual phone, smaller on the narrowest ones (280px) so "HELLO," clears the avatar */
+		--overprint-size: min(34px, 9vw);
+		--overprint-leading: 1.1;
+		grid-area: title;
+	}
+	.cover-avatar {
+		--avatar-size: 104px;
+		grid-area: avatar;
+	}
+	.intro {
+		grid-area: intro;
+		display: flex;
+		flex-direction: column;
+		gap: 20px;
+	}
+	.intro p {
+		margin: 0;
+	}
+
+	/* Beliefs: a number, the belief with one highlighted word, then why */
+	.beliefs {
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
+	}
+	.beliefs ol {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+		border-top: var(--border) solid var(--ink);
+	}
+	.beliefs li {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: flex-start;
+		gap: 10px 40px;
+		padding: 24px 0;
+		border-bottom: var(--border-thin) dashed var(--green);
+	}
+	.number {
+		flex: 0 0 100%;
+		color: var(--orange-text);
+		font-family: var(--font-title);
+		font-size: 24px;
+		line-height: 1.1;
+	}
+	.belief {
+		flex: 1 1 400px;
+		min-width: 0;
+		margin: 0;
+		color: var(--green);
+		font-family: var(--font-title);
+		font-size: 21px;
+		line-height: 1.3;
+	}
+	.belief .highlight {
+		color: var(--ink);
+	}
+	.why {
+		flex: 1 1 340px;
+		min-width: 0;
+		margin: 0;
+		font-size: 16px;
+	}
+
+	/* Green band right under the beliefs, with the solid orange shadow */
+	.contact {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: 14px 48px;
+		margin: -24px 8px 0 0;
+		padding: 24px 18px;
+		background: var(--green);
+		box-shadow: 8px 8px 0 var(--orange);
+		color: var(--paper);
+	}
+	.contact-text {
+		flex: 1 1 480px;
+		min-width: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+	}
+	.contact h2 {
+		color: var(--paper);
+		font-size: 19px;
+	}
+	.contact p {
+		margin: 0;
+		font-size: 16px;
+	}
+	.contact-links {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 12px 16px;
+	}
+	.contact-links a {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.5em;
+		min-height: 48px;
+		padding: 0 18px;
+		border: var(--border) solid var(--ink);
+		background: var(--paper);
+		color: var(--ink);
+		font-weight: 700;
+		text-decoration: none;
+	}
+	.contact-links a:hover {
+		color: var(--orange-text);
+	}
+	.contact-links a:focus-visible {
+		outline-color: var(--paper);
+	}
+
+	/* My kit: the timeline since the first job */
+	.kit {
+		display: flex;
+		flex-direction: column;
+		gap: 20px;
+	}
+	.kit-head {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+	}
+	.kit-note {
+		--hand-size: 28px;
+	}
+	.kit-note .left {
+		display: none;
+	}
+
+	@media (min-width: 640px) {
+		.about {
+			gap: 96px;
+		}
+		.about h2 {
+			font-size: 28px;
+		}
+		.cover {
+			gap: 24px 32px;
+		}
+		.title {
+			--overprint-size: clamp(48px, 6.6vw, 84px);
+			--overprint-leading: 1.02;
+		}
+		.cover-avatar {
+			--avatar-size: 180px;
+		}
+		.intro {
+			gap: 24px;
+		}
+		.intro p {
+			max-width: 680px;
+			font-size: 20px;
+		}
+		.beliefs {
+			gap: 24px;
+		}
+		/* Number in its own column; the explanation stays under the belief, never under the number */
+		.beliefs li {
+			display: grid;
+			grid-template-columns: 72px minmax(0, 1fr);
+			gap: 12px 32px;
+			padding: 32px 0;
+		}
+		.number {
+			grid-row: span 2;
+			font-size: 34px;
+		}
+		.belief {
+			font-size: 28px;
+		}
+		.why {
+			grid-column: 2;
+			font-size: 17px;
+		}
+		.contact {
+			margin: -32px 10px 0 0;
+			padding: 36px 40px;
+			box-shadow: 10px 10px 0 var(--orange);
+		}
+		.contact h2 {
+			font-size: 24px;
+		}
+		.contact p {
+			font-size: 18px;
+		}
+		.contact-links a {
+			min-height: 52px;
+			padding-inline: 20px;
+		}
+		.kit {
+			gap: 32px;
+		}
+		.kit-note {
+			--hand-size: 32px;
+		}
+	}
+
+	/* The avatar gets its own column, centered next to the kicker, the title and the intro */
+	@media (min-width: 960px) {
+		.cover {
+			grid-template-areas:
+				'kicker avatar'
+				'title avatar'
+				'intro avatar';
+			align-items: start;
+			column-gap: 56px;
+		}
+		.cover-avatar {
+			--avatar-size: 280px;
+			align-self: center;
+		}
+		/* Belief, then its explanation, side by side */
+		.beliefs li {
+			grid-template-columns: 72px minmax(0, 1.15fr) minmax(0, 1fr);
+			gap: 16px 40px;
+		}
+		.number {
+			grid-row: auto;
+		}
+		.why {
+			grid-column: auto;
+		}
+	}
+
+	/* The kit title fits on one line from here: the note goes next to it and points at it */
+	@media (min-width: 1100px) {
+		.kit-head {
+			flex-direction: row;
+			flex-wrap: wrap;
+			align-items: baseline;
+			gap: 8px 20px;
+		}
+		.kit-note .left {
+			display: inline;
+		}
+	}
+</style>

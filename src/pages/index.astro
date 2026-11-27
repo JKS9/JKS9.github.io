@@ -1,60 +1,641 @@
 ---
-import { getCollection } from 'astro:content';
-import BaseHead from '../components/BaseHead.astro';
-import Footer from '../components/Footer.astro';
-import FormattedDate from '../components/FormattedDate.astro';
-import Header from '../components/Header.astro';
-import { personJsonLd, SITE_DESCRIPTION, SITE_TITLE } from '../consts';
+// Home page, laid out like a zine cover. Mobile first: one column on a phone, the stamp inside the
+// intro; from 900px the stamp moves next to the cover, from 960px "before / after" goes side by side.
+import ArrowLink from '../components/ArrowLink.astro';
+import Avatar from '../components/Avatar.astro';
+import Button from '../components/Button.astro';
+import Frame from '../components/Frame.astro';
+import HandNote from '../components/HandNote.astro';
+import IssueList from '../components/IssueList.astro';
+import Kicker from '../components/Kicker.astro';
+import Overprint from '../components/Overprint.astro';
+import Stamp from '../components/Stamp.astro';
+import { personJsonLd, SITE_DESCRIPTION, SITE_TITLE, websiteJsonLd } from '../consts';
+import { HOME_BELIEFS } from '../data/about';
+import { TOOLS } from '../data/tools';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getIssues, getTopics, topicSlug } from '../utils/issues';
 
-const posts = (await getCollection('blog'))
-	.sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
-	.slice(0, 5);
+const issues = await getIssues();
+const latest = issues[0];
+const newest = issues.slice(0, 5);
+const kicker = latest
+	? `Latest issue · ${latest.label} · ${latest.post.data.pubDate.toLocaleDateString('en-us', { month: 'long', year: 'numeric', timeZone: 'UTC' })}`
+	: 'First issue · coming soon';
 
 const jsonLd = {
 	'@context': 'https://schema.org',
-	'@graph': [
-		{
-			'@type': 'WebSite',
-			'@id': new URL('/#website', Astro.site).href,
-			url: new URL('/', Astro.site).href,
-			name: SITE_TITLE,
-			description: SITE_DESCRIPTION,
-			inLanguage: 'en',
-			publisher: { '@id': new URL('/#person', Astro.site).href },
-		},
-		personJsonLd(Astro.site),
-	],
+	'@graph': [websiteJsonLd(Astro.site), personJsonLd(Astro.site)],
 };
+
+const bandText = 'Web scraping · Schema drift · Data pipelines · Alerts · Playwright · Zod · Node.js';
+// The band scrolls by one copy in a loop: the four others keep it full, even on a 4K screen
+const bandCopies = [1, 2, 3, 4, 5];
+
+const pageSource = `<div class="card-2 js-x">
+  <span class="t">Green tea 100g</span>
+  <b>  3,49&nbsp;€ </b>
+  <i>In stock?</i>
+  <!-- price moved here in v3 -->
+</div>`;
+
+const data = `{
+  "name": "Green tea 100g",
+  "price": 3.49,
+  "currency": "EUR",
+  "inStock": true
+}`;
+
+// Open-source tools that come with the articles (shared with llms.txt)
+const tools = TOOLS;
+
+// "What I write about": a topic links to its page (/blog/topic/…) as soon as a published issue carries
+// its tag, so articles must use these exact tag names. More internal links for search engines.
+const topicUrls = new Map(getTopics(issues).map((topic) => [topic.slug, topic.url]));
+const topics = [
+	{ tag: 'Web scraping', text: 'Scrapers that keep working when a site changes or pushes back' },
+	{ tag: 'Data pipelines', text: "Data pipelines that don't lose items" },
+	{ tag: 'Schema drift', text: 'Schema drift: knowing when an API changes' },
+	{ tag: 'Alerts', text: 'Alerts that tell you once, not a thousand times' },
+].map((topic) => ({ ...topic, url: topicUrls.get(topicSlug(topic.tag)) }));
 ---
 
-<!doctype html>
-<html lang="en">
-	<head>
-		<BaseHead title={SITE_TITLE} description={SITE_DESCRIPTION} />
-		<script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
-	</head>
-	<body>
-		<Header />
-		<main>
-			<h1>JKS9</h1>
-			<p>
-				I'm JKS9, a back-end developer specialized in Node.js, NestJS and web scraping. I write
-				about web scraping in production: reliable scrapers, data pipelines, schema drift and alerts.
-			</p>
+<BaseLayout title={SITE_TITLE} description={SITE_DESCRIPTION} jsonLd={jsonLd} bleed>
+	<div class="home">
+		<section class="container cover" aria-labelledby="cover-title">
+			<div class="cover-text">
+				<Kicker>{kicker}</Kicker>
+				<Overprint as="h1" id="cover-title" text="JKS9" />
+				<p class="tagline"><span class="highlight">Web scraping</span> in production</p>
+				<p class="intro">
+					<Stamp class="stamp-inline" />
+					I'm JKS9, a back-end developer specialized in Node.js, NestJS and web scraping. I write about web scraping
+					in production: reliable scrapers, data pipelines, schema drift and alerts.
+				</p>
+			</div>
+			<Stamp class="stamp-side" />
+		</section>
 
-			<h2>Latest articles</h2>
-			{posts.length === 0 ? (
-				<p>The first article is coming soon.</p>
-			) : (
-				<ul>
-					{posts.map((post) => (
-						<li>
-							<a href={`/blog/${post.id}/`}>{post.data.title}</a> · <FormattedDate date={post.data.pubDate} />
-						</li>
-					))}
-				</ul>
-			)}
-		</main>
-		<Footer />
-	</body>
-</html>
+		<div class="band-wrap" aria-hidden="true">
+			<div class="band">
+				<p class="track">{bandCopies.map(() => <span>{`${bandText} · `}</span>)}</p>
+			</div>
+		</div>
+
+		<section class="container before-after" aria-labelledby="before-after-title">
+			<h2 id="before-after-title">From the page to the data</h2>
+			<div class="frames">
+				<Frame class="before" label="Before · the page" note="fragile selectors!" noteTilt={-5}>
+					<pre tabindex="0"><code>{pageSource}</code></pre>
+				</Frame>
+				<svg class="arrow arrow-down" aria-hidden="true" width="40" height="52" viewBox="0 0 40 52">
+					<path d="M20 4 C 8 16, 32 28, 20 46"></path>
+					<path d="M11 37 L 20 47 L 29 37"></path>
+				</svg>
+				<svg class="arrow arrow-right" aria-hidden="true" width="64" height="40" viewBox="0 0 64 40">
+					<path d="M4 22 C 18 8, 34 34, 52 18"></path>
+					<path d="M42 12 L 54 17 L 48 29"></path>
+				</svg>
+				<Frame label="After · the data" tone="orange" note="checked by a schema" noteTilt={3}>
+					<pre tabindex="0"><code>{data}</code></pre>
+				</Frame>
+			</div>
+		</section>
+
+		<section class="container latest" aria-labelledby="latest-title">
+			<div class="latest-head">
+				<h2 id="latest-title">Latest issues</h2>
+				{
+					issues.length > newest.length && (
+						<HandNote class="latest-note" tilt={-3}>
+							<span class="up">↑</span><span class="left">←</span> the {newest.length} newest, the rest is in the blog
+						</HandNote>
+					)
+				}
+			</div>
+			{
+				newest.length > 0 ? (
+					<IssueList issues={newest} newBadge />
+				) : (
+					<p class="empty">The first issue is on its way.</p>
+				)
+			}
+			<div class="latest-foot">
+				<Button class="all-button" href="/blog/" arrow="forward">All issues</Button>
+				<ArrowLink class="all-link" href="/blog/">All issues</ArrowLink>
+				<p class="rss">New issues by <a href="/rss/">RSS</a>. No newsletter.</p>
+			</div>
+		</section>
+
+		<section class="container tools" aria-labelledby="tools-title">
+			<div class="tools-text">
+				<h2 id="tools-title">Free tools</h2>
+				<p>Small open-source tools that come with the articles. One readable file, MIT, no paid tier.</p>
+			</div>
+			{
+				tools.map((tool) => (
+					<a class="tool" href={tool.url}>
+						<span class="tool-name">{tool.name}</span>
+						<span>{tool.description}</span>
+						<span class="tool-meta">{tool.stack}</span>
+						<span class="tool-cta">
+							View on GitHub <span aria-hidden="true">→</span>
+						</span>
+					</a>
+				))
+			}
+		</section>
+
+		<div class="container">
+			<section class="topics" aria-labelledby="topics-title">
+				<div class="dots" aria-hidden="true"></div>
+				<div class="topics-text">
+					<h2 id="topics-title">What I write about</h2>
+					<ul>{topics.map((topic) => <li>{topic.url ? <a href={topic.url}>{topic.text}</a> : topic.text}</li>)}</ul>
+				</div>
+				<section class="editor" aria-labelledby="editor-title">
+					<div class="editor-head">
+						<Avatar class="editor-avatar" size={88} sizes="(min-width: 640px) 88px, 72px" />
+						<div class="editor-name">
+							<Kicker class="editor-kicker">The editor</Kicker>
+							<h3 id="editor-title">Hello, I'm JKS9</h3>
+						</div>
+					</div>
+					<p class="editor-lead">What I believe about scraping:</p>
+					<ul>{HOME_BELIEFS.map((belief) => <li>{belief.title}</li>)}</ul>
+					<ArrowLink class="editor-link" href="/about/">More about me</ArrowLink>
+				</section>
+			</section>
+		</div>
+	</div>
+</BaseLayout>
+
+<style>
+	.home {
+		display: flex;
+		flex-direction: column;
+		gap: 56px;
+		/* The tilted band and the dot patch must never cause a sideways scroll */
+		overflow-x: clip;
+	}
+	.home h2 {
+		margin: 0;
+		font-size: 22px;
+		line-height: 1.3;
+	}
+
+	/* Cover: kicker, "JKS9" off register, tagline, intro, stamp */
+	.cover {
+		display: flex;
+		align-items: flex-end;
+		justify-content: space-between;
+		gap: 48px;
+	}
+	.cover-text {
+		--overprint-size: clamp(64px, 20vw, 84px);
+		flex: 1 1 560px;
+		min-width: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 20px;
+	}
+	.tagline {
+		margin: 0;
+		color: var(--ink);
+		font-family: var(--font-title);
+		font-size: clamp(21px, 2.6vw, 34px);
+		line-height: 1.35;
+	}
+	.intro {
+		margin: 0;
+	}
+	/* On a phone the stamp sits in the intro and the text wraps around it */
+	.intro .stamp-inline {
+		--stamp-size: 120px;
+		float: right;
+		margin: 2px 6px 8px 12px;
+		shape-outside: circle(50%);
+		shape-margin: 8px;
+	}
+	.cover .stamp-side {
+		display: none;
+	}
+
+	/* Green band across the page, slightly tilted, its text scrolling slowly like a ticker */
+	.band-wrap {
+		overflow: hidden;
+		padding-block: 12px;
+	}
+	.band {
+		width: 112%;
+		margin-left: -6%;
+		padding-block: 10px;
+		overflow: hidden;
+		background: var(--green);
+		color: var(--paper);
+		font-family: var(--font-title);
+		font-size: 14px;
+		letter-spacing: 0.08em;
+		transform: rotate(-1.2deg);
+	}
+	/* Moving by a fifth of the track (one copy) lands exactly where it started: no jump in the loop.
+	   "pre" keeps the space after each copy. Only transform moves, so no layout shift.
+	   Two loops (one minute), then it rests where it started: moving text should not run forever. */
+	.track {
+		display: inline-block;
+		margin: 0;
+		white-space: pre;
+		animation: band-scroll 30s linear 2;
+	}
+	.band:hover .track {
+		animation-play-state: paused;
+	}
+	@keyframes band-scroll {
+		to {
+			transform: translateX(-20%);
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		.track {
+			animation: none;
+		}
+	}
+
+	/* Before / after: stacked with a down arrow on a phone */
+	.before-after {
+		display: flex;
+		flex-direction: column;
+		gap: 20px;
+	}
+	.frames {
+		display: flex;
+		flex-direction: column;
+		gap: 20px;
+	}
+	/* The gap alone spaces the frames: the arrow sits halfway between them when they are stacked */
+	.frames > :global(.frame) {
+		margin-bottom: 0;
+	}
+	.before pre {
+		color: var(--green);
+	}
+	.arrow {
+		flex: 0 0 auto;
+		fill: none;
+		stroke: var(--orange-text);
+		stroke-width: 4;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+	}
+	.arrow-down {
+		align-self: flex-start;
+		margin-left: 28px;
+	}
+	.arrow-right {
+		display: none;
+	}
+
+	/* Latest issues */
+	.latest {
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+	}
+	.latest-head {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		gap: 8px 20px;
+	}
+	.latest-note {
+		--hand-size: 28px;
+	}
+	.latest-note .left {
+		display: none;
+	}
+	.empty {
+		margin: 0;
+		padding-top: 20px;
+		border-top: var(--border) solid var(--ink);
+	}
+	.latest-foot {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		margin-top: 12px;
+	}
+	.latest-foot .all-button {
+		display: flex;
+		justify-content: center;
+	}
+	.latest-foot .all-link {
+		display: none;
+	}
+	.rss {
+		margin: 0;
+		font-size: 15px;
+		text-align: center;
+	}
+	.rss a {
+		display: inline-block;
+		padding: 10px 0;
+	}
+
+	/* Free tools: a card per tool, ink frame and orange shadow */
+	.tools {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: stretch;
+		gap: 12px 48px;
+	}
+	.tools-text {
+		flex: 1 1 300px;
+		min-width: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+	}
+	.tools-text p {
+		margin: 0;
+	}
+	.tool {
+		flex: 2 1 480px;
+		min-width: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		margin: 8px 6px 6px 0;
+		padding: 20px;
+		border: var(--border) solid var(--ink);
+		box-shadow: 6px 6px 0 var(--orange);
+		color: var(--ink);
+		text-decoration: none;
+	}
+	.tool:hover {
+		color: var(--ink);
+	}
+	.tool:hover .tool-cta {
+		color: var(--orange-text);
+	}
+	.tool-name {
+		color: var(--green);
+		font-family: var(--font-title);
+		font-size: 18px;
+		line-height: 1.4;
+		overflow-wrap: anywhere;
+	}
+	.tool-meta {
+		color: var(--green);
+		font-size: 14px;
+	}
+	.tool-cta {
+		font-weight: 700;
+	}
+
+	/* "What I write about" frame with a dot patch spilling over its corner, and "The editor" box */
+	.topics {
+		position: relative;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 28px 56px;
+		padding: 28px 18px 22px;
+		border: var(--border) solid var(--green);
+	}
+	.dots {
+		position: absolute;
+		top: -14px;
+		right: -12px;
+		width: 104px;
+		height: 76px;
+		background-image: radial-gradient(var(--orange) 2px, transparent 2.6px);
+		background-size: 10px 10px;
+		mix-blend-mode: multiply;
+	}
+	/* While the editor box sits under the topics (below 960px), the text keeps clear of the dot patch */
+	.topics-text {
+		position: relative;
+		flex: 1 1 420px;
+		min-width: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+		padding-right: 64px;
+	}
+	.topics-text h2 {
+		font-size: 20px;
+	}
+	.topics-text ul {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		margin: 0;
+		padding-left: 20px;
+	}
+	/* "The editor": the avatar, three beliefs from the About page and a link to it */
+	.editor {
+		position: relative;
+		flex: 1 1 320px;
+		min-width: 0;
+		align-self: flex-start;
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+		padding: 16px 14px 6px;
+		border: var(--border) solid var(--ink);
+		background: var(--paper);
+	}
+	.editor-head {
+		display: flex;
+		align-items: center;
+		gap: 14px;
+	}
+	.editor-avatar {
+		--avatar-size: 72px;
+	}
+	/* A smaller kicker than the page ones, at every width (beats the Kicker's own media query) */
+	.editor .editor-name .editor-kicker {
+		font-size: 12px;
+	}
+	.editor-name {
+		min-width: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+	}
+	/* A sub-heading of "What I write about", in the size of the box */
+	.editor h3 {
+		margin: 0;
+		font-size: 18px;
+		line-height: 1.3;
+	}
+	.editor-lead {
+		margin: 0;
+		font-size: 15px;
+		font-weight: 700;
+	}
+	.editor ul {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+		border-top: var(--border) solid var(--ink);
+		font-size: 15px;
+		line-height: 1.5;
+	}
+	.editor li {
+		display: flex;
+		align-items: baseline;
+		gap: 10px;
+		padding: 8px 0;
+		border-bottom: var(--border-thin) dashed var(--green);
+	}
+	/* Square orange bullet */
+	.editor li::before {
+		content: '';
+		flex: 0 0 auto;
+		width: 8px;
+		height: 8px;
+		background: var(--orange);
+	}
+	.editor-link {
+		align-self: flex-start;
+	}
+
+	@media (min-width: 640px) {
+		.home {
+			gap: 80px;
+		}
+		.home h2 {
+			font-size: 28px;
+		}
+		.cover-text {
+			--overprint-size: clamp(88px, 15vw, 210px);
+			gap: 28px;
+		}
+		.intro {
+			max-width: 640px;
+			font-size: 20px;
+		}
+		.intro .stamp-inline {
+			--stamp-size: 150px;
+		}
+		.band {
+			padding-block: 14px;
+			font-size: 18px;
+		}
+		.latest {
+			gap: 20px;
+		}
+		.latest-note {
+			--hand-size: 32px;
+		}
+		.latest-foot {
+			flex-direction: row;
+			flex-wrap: wrap;
+			align-items: center;
+			justify-content: space-between;
+			gap: 8px 24px;
+			margin-top: 0;
+		}
+		.latest-foot .all-button {
+			display: none;
+		}
+		.latest-foot .all-link {
+			display: inline-flex;
+			font-size: 16px;
+		}
+		.rss {
+			font-size: 16px;
+			text-align: left;
+		}
+		.tools {
+			gap: 32px 48px;
+		}
+		.tool {
+			margin: 0 8px 8px 0;
+			padding: 28px;
+			box-shadow: 8px 8px 0 var(--orange);
+		}
+		.tool-name {
+			font-size: 22px;
+		}
+		.tool-meta {
+			font-size: 15px;
+		}
+		.topics {
+			padding: 40px;
+		}
+		.dots {
+			top: -18px;
+			right: -18px;
+			width: 150px;
+			height: 110px;
+		}
+		.topics-text {
+			padding-right: 104px;
+		}
+		.topics-text h2 {
+			font-size: 24px;
+		}
+		.editor {
+			gap: 14px;
+			padding: 20px 22px 8px;
+		}
+		.editor-head {
+			gap: 18px;
+		}
+		.editor-avatar {
+			--avatar-size: 88px;
+		}
+		.editor h3 {
+			font-size: 22px;
+		}
+		.editor-lead,
+		.editor ul {
+			font-size: 16px;
+		}
+		.editor li {
+			gap: 12px;
+		}
+		.editor li::before {
+			width: 9px;
+			height: 9px;
+		}
+	}
+
+	/* The stamp gets its own column next to the cover */
+	@media (min-width: 900px) {
+		.intro .stamp-inline {
+			display: none;
+		}
+		.cover .stamp-side {
+			display: block;
+			flex: 0 0 auto;
+		}
+	}
+
+	/* Before and after side by side, the arrow pointing right.
+	   The note fits next to "Latest issues" from here, so its arrow points left instead of up. */
+	@media (min-width: 960px) {
+		.latest-note .up {
+			display: none;
+		}
+		.latest-note .left {
+			display: inline;
+		}
+		.frames {
+			display: grid;
+			grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+			align-items: center;
+		}
+		/* The editor box is now next to the topics: the dot patch spills over its empty corner */
+		.topics-text {
+			padding-right: 0;
+		}
+		.arrow-down {
+			display: none;
+		}
+		.arrow-right {
+			display: block;
+		}
+	}
+</style>

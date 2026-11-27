@@ -1,0 +1,271 @@
+---
+// "Latest on GitHub": the newest public repo and the latest commits, fetched at build time.
+// Renders nothing when GitHub couldn't be reached. Mobile first: stacked on a phone,
+// the repo card and the commits side by side from 900px.
+import { getGitHubActivity } from '../utils/github';
+import HandNote from './HandNote.astro';
+import Kicker from './Kicker.astro';
+
+const activity = await getGitHubActivity();
+const repo = activity?.newestRepo ?? null;
+const commits = activity?.commits ?? [];
+
+// Dates are written in UTC, which says nothing about where the author lives; the script at the
+// bottom then shows them in the reader's own timezone. The formats here and there must match.
+const SHORT: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
+const FULL: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', year: 'numeric' };
+const utc = (date: Date, format: Intl.DateTimeFormatOptions) =>
+	date.toLocaleDateString('en-us', { ...format, timeZone: 'UTC' });
+const repoMeta = repo ? [repo.language, repo.license].filter(Boolean).join(' · ') : '';
+---
+
+{
+	(repo || commits.length > 0) && (
+		<section class="github" aria-labelledby="github-title">
+			<div class="head">
+				<h2 id="github-title">Latest on GitHub</h2>
+				<HandNote class="note">
+					<span class="left">← </span>straight from git log
+				</HandNote>
+			</div>
+			<div class="columns">
+				{repo && (
+					<article class="repo" aria-labelledby="newest-repo-title">
+						<Kicker>Newest repo</Kicker>
+						<h3 id="newest-repo-title">{repo.name}</h3>
+						{repo.description && <p class="description">{repo.description}</p>}
+						<p class="meta">
+							{repoMeta && `${repoMeta} · `}
+							<span class="nowrap">
+								published{' '}
+								<time datetime={repo.createdAt.toISOString()} data-local="full">
+									{utc(repo.createdAt, FULL)}
+								</time>
+							</span>
+						</p>
+						<a class="cta" href={repo.url}>
+							View on GitHub <span aria-hidden="true">→</span>
+						</a>
+					</article>
+				)}
+				{commits.length > 0 && (
+					<div class="commits">
+						<h3>Latest commits</h3>
+						<ol>
+							{commits.map((commit) => (
+								<li>
+									<a href={commit.url}>
+										<span class="sha">{commit.sha}</span>
+										<span class="message">{commit.message}</span>
+										<span class="meta">
+											{commit.repo} ·{' '}
+											<time datetime={commit.date.toISOString()} data-local="short">
+												{utc(commit.date, SHORT)}
+											</time>
+										</span>
+									</a>
+								</li>
+							))}
+						</ol>
+					</div>
+				)}
+			</div>
+		</section>
+	)
+}
+
+<!-- Rewrites the UTC dates in the reader's timezone (the browser's default one) -->
+<script>
+	const formats: Record<string, Intl.DateTimeFormatOptions> = {
+		short: { month: 'short', day: 'numeric' },
+		full: { month: 'short', day: 'numeric', year: 'numeric' },
+	};
+	for (const time of document.querySelectorAll<HTMLTimeElement>('time[data-local]')) {
+		const format = formats[time.dataset.local ?? ''];
+		if (format) time.textContent = new Date(time.dateTime).toLocaleDateString('en-us', format);
+	}
+</script>
+
+<style>
+	.github {
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
+	}
+	.head {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+	}
+	h2 {
+		margin: 0;
+		font-size: 21px;
+		line-height: 1.3;
+	}
+	.note {
+		--hand-size: 28px;
+	}
+	.note .left {
+		display: none;
+	}
+	.columns {
+		display: flex;
+		flex-direction: column;
+		gap: 28px;
+	}
+
+	/* Newest repo: ink card with the solid orange shadow */
+	.repo {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		margin-right: 8px;
+		padding: 20px 18px;
+		border: var(--border) solid var(--ink);
+		box-shadow: 8px 8px 0 var(--orange);
+	}
+	.repo h3 {
+		margin: 0;
+		font-size: 18px;
+		overflow-wrap: anywhere;
+	}
+	.description {
+		margin: 0;
+		font-size: 16px;
+	}
+	.repo .meta {
+		margin: 0;
+		color: var(--green);
+		font-size: 14px;
+	}
+	.cta {
+		display: inline-flex;
+		align-items: center;
+		align-self: flex-start;
+		min-height: 44px;
+		font-weight: 700;
+	}
+
+	/* Latest commits, like a short git log */
+	.commits {
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+	}
+	.commits h3 {
+		margin: 0;
+		color: var(--ink);
+		font-size: 14px;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+	}
+	ol {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+		border-top: var(--border) solid var(--ink);
+		font-size: 16px;
+	}
+	li {
+		border-bottom: var(--border-thin) dashed var(--green);
+	}
+	/* On a phone the message runs on after the hash like a sentence, the repo and date under it */
+	li a {
+		display: block;
+		padding: 12px 0;
+		color: var(--ink);
+		text-decoration: none;
+	}
+	li a:hover .message {
+		color: var(--orange-text);
+	}
+	.sha {
+		margin-right: 0.6em;
+		color: var(--orange-text);
+		font-weight: 700;
+	}
+	li .meta {
+		display: block;
+		margin-top: 2px;
+		color: var(--green);
+		font-size: 14px;
+	}
+	.nowrap {
+		white-space: nowrap;
+	}
+
+	@media (min-width: 640px) {
+		.github {
+			gap: 24px;
+		}
+		.head {
+			flex-direction: row;
+			flex-wrap: wrap;
+			align-items: baseline;
+			gap: 8px 20px;
+		}
+		h2 {
+			font-size: 28px;
+		}
+		.note {
+			--hand-size: 32px;
+		}
+		.note .left {
+			display: inline;
+		}
+		.repo {
+			padding: 26px 28px;
+		}
+		.repo h3 {
+			font-size: 22px;
+		}
+		.description {
+			font-size: 17px;
+		}
+		.repo .meta {
+			font-size: 15px;
+		}
+		.commits h3 {
+			font-size: 16px;
+		}
+		ol {
+			font-size: 18px;
+		}
+		/* Hash | message | repo · date on one row, wrapping when the message is long */
+		li a {
+			display: flex;
+			flex-wrap: wrap;
+			align-items: baseline;
+			gap: 2px 16px;
+		}
+		.sha {
+			flex: 0 0 76px;
+			margin-right: 0;
+		}
+		.message {
+			flex: 1 1 280px;
+			min-width: 0;
+		}
+		li .meta {
+			flex: 0 0 auto;
+			margin-top: 0;
+			font-size: 15px;
+		}
+	}
+
+	@media (min-width: 900px) {
+		.columns {
+			flex-direction: row;
+			align-items: flex-start;
+			gap: 48px;
+		}
+		.repo {
+			flex: 0 1 450px;
+			min-width: 0;
+		}
+		.commits {
+			flex: 1.6 1 480px;
+			min-width: 0;
+		}
+	}
+</style>

@@ -1,0 +1,47 @@
+---
+// Handwritten note in Reenie Beanie, slightly tilted. Keep one or two per page.
+import type { HTMLAttributes } from 'astro/types';
+
+type Props = HTMLAttributes<'span'> & {
+	tone?: 'green' | 'orange';
+	/** Rotation in degrees */
+	tilt?: number;
+	/** Font size, any CSS length. Under 28px the font gets hard to read. */
+	size?: string;
+	/** Hidden from screen readers: most notes only repeat what the page says */
+	decorative?: boolean;
+};
+
+const {
+	tone = 'orange',
+	tilt = -3,
+	size,
+	decorative = true,
+	class: className,
+	...rest
+} = Astro.props;
+const style = [`--tilt: ${tilt}deg`, size && `--hand-size: ${size}`].filter(Boolean).join('; ');
+---
+
+<span
+	class:list={['hand', tone, className]}
+	style={style}
+	aria-hidden={decorative ? 'true' : undefined}
+	{...rest}><slot /></span
+>
+
+<style>
+	.hand {
+		display: inline-block;
+		font-family: var(--font-hand);
+		font-size: var(--hand-size, 32px);
+		line-height: 1;
+		transform: rotate(var(--tilt));
+	}
+	.green {
+		color: var(--green);
+	}
+	.orange {
+		color: var(--orange-text);
+	}
+</style>

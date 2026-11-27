@@ -1,0 +1,53 @@
+---
+// Two round dots printed in two inks, the orange one slightly off register.
+interface Props {
+	/** Diameter of the dots, in pixels. Without it, the dots follow --logo-size (34px by default),
+	    so a parent can resize them with a media query. */
+	size?: number;
+	/** Shows "JKS9" next to the dots, at --wordmark-size (22px by default) */
+	wordmark?: boolean;
+}
+
+const { size, wordmark = true } = Astro.props;
+---
+
+<span class="logo" style={size ? `--logo-size: ${size}px` : undefined}>
+	<span class="dots" aria-hidden="true">
+		<span class="dot orange"></span>
+		<span class="dot green"></span>
+	</span>
+	{wordmark && <span class="wordmark">JKS9</span>}
+</span>
+
+<style>
+	.logo {
+		display: inline-flex;
+		align-items: center;
+		gap: var(--logo-gap, 12px);
+		color: var(--green);
+	}
+	.dots {
+		position: relative;
+		flex: 0 0 auto;
+		width: var(--logo-size, 34px);
+		height: var(--logo-size, 34px);
+	}
+	.dot {
+		position: absolute;
+		inset: 0;
+		border-radius: 50%;
+		mix-blend-mode: multiply;
+	}
+	.orange {
+		background: var(--orange);
+		transform: translate(var(--misregistration), 2px);
+	}
+	.green {
+		background: var(--green);
+	}
+	.wordmark {
+		font-family: var(--font-title);
+		font-size: var(--wordmark-size, 22px);
+		line-height: 1;
+	}
+</style>

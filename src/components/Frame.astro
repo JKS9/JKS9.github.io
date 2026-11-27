@@ -1,0 +1,91 @@
+---
+// Framed box with a label tab ("BEFORE · THE PAGE", "AFTER · THE DATA")
+// and an optional handwritten note cutting the bottom border.
+// The note takes the other ink, so the two colors always meet.
+import type { HTMLAttributes } from 'astro/types';
+import HandNote from './HandNote.astro';
+
+type Props = HTMLAttributes<'figure'> & {
+	label: string;
+	tone?: 'green' | 'orange';
+	note?: string;
+	/** Rotation of the note, in degrees */
+	noteTilt?: number;
+};
+
+const { label, tone = 'green', note, noteTilt = -4, class: className, ...rest } = Astro.props;
+const noteTone = tone === 'green' ? 'orange' : 'green';
+---
+
+<figure class:list={['frame', tone, className]} {...rest}>
+	<figcaption>{label}</figcaption>
+	<slot />
+	{
+		note && (
+			<span class="note">
+				<HandNote tone={noteTone} tilt={noteTilt}>
+					{note}
+				</HandNote>
+			</span>
+		)
+	}
+</figure>
+
+<style>
+	.frame {
+		position: relative;
+		margin: 0 0 30px;
+		border: var(--border) solid var(--green);
+	}
+	.frame.orange {
+		border-color: var(--orange);
+	}
+	/* Mobile first: smaller label, code and note on a phone so a 40-character line still fits */
+	figcaption {
+		display: inline-block;
+		padding: 4px 12px;
+		background: var(--green);
+		color: var(--paper);
+		font-family: var(--font-title);
+		font-size: 12px;
+		letter-spacing: 0.1em;
+	}
+	.orange figcaption {
+		/* White on --orange would be unreadable (2.8:1) */
+		background: var(--orange-text);
+	}
+	.frame :global(pre) {
+		margin: 0;
+		padding: 16px;
+		background: none;
+		border: 0;
+		color: var(--ink);
+		font-size: 13px;
+		line-height: 1.55;
+	}
+	.note {
+		--hand-size: 28px;
+		position: absolute;
+		right: 12px;
+		bottom: -22px;
+		padding: 0 6px;
+		background: var(--paper);
+	}
+
+	@media (min-width: 640px) {
+		figcaption {
+			padding: 4px 14px;
+			font-size: 14px;
+		}
+		.frame :global(pre) {
+			padding: 24px;
+			font-size: 16px;
+			line-height: 1.6;
+		}
+		.note {
+			--hand-size: 32px;
+			right: 18px;
+			bottom: -28px;
+		}
+	}
+</style>

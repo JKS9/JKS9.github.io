@@ -1,20 +1,30 @@
 ---
-import { type CollectionEntry, getCollection, render } from 'astro:content';
+import { type CollectionEntry, render } from 'astro:content';
 import BlogPost from '../../layouts/BlogPost.astro';
+import { getIssues } from '../../utils/issues';
 
 export async function getStaticPaths() {
-	const posts = await getCollection('blog');
-	return posts.map((post) => ({
-		params: { slug: post.id },
-		props: post,
+	const issues = await getIssues();
+	return issues.map((issue) => ({
+		params: { slug: issue.post.id },
+		props: { post: issue.post, number: issue.number },
 	}));
 }
-type Props = CollectionEntry<'blog'>;
 
-const post = Astro.props;
+interface Props {
+	post: CollectionEntry<'blog'>;
+	/** Issue number, N°01 being the oldest article */
+	number: number;
+}
+
+const { post, number } = Astro.props;
 const { Content } = await render(post);
+
+// About 230 words a minute for technical English; code blocks count as text
+const words = (post.body ?? '').split(/\s+/).filter(Boolean).length;
+const minutes = Math.max(1, Math.round(words / 230));
 ---
 
-<BlogPost {...post.data}>
+<BlogPost {...post.data} slug={post.id} issue={number} minutes={minutes} words={words}>
 	<Content />
 </BlogPost>

@@ -1,0 +1,103 @@
+---
+// JKS9's avatar (a cocker spaniel puppy holding a daisy), cropped round in a green frame.
+// "dots": printed over an orange dot screen shifted off register, with an "Editor" stamp (About page).
+// "shadow": with a solid orange shadow, for small sizes (home page).
+// The displayed size follows --avatar-size; `sizes` tells the browser that size per screen width,
+// so a phone downloads the small square, not the desktop one.
+import { Image } from 'astro:assets';
+import type { HTMLAttributes } from 'astro/types';
+import avatar from '../assets/avatar.jpg';
+
+type Props = HTMLAttributes<'span'> & {
+	/** Largest displayed size, in CSS pixels */
+	size: number;
+	/** Displayed size per screen width, like the `sizes` attribute ("(min-width: 640px) 88px, 72px") */
+	sizes: string;
+	variant?: 'dots' | 'shadow';
+	/** Loads the image right away: for an avatar visible without scrolling */
+	priority?: boolean;
+};
+
+const { size, sizes, variant = 'shadow', priority = false, class: className, ...rest } = Astro.props;
+
+// Square crops at 1x and 2x of each displayed size. The source photo is 543 × 360,
+// so nothing larger than a 360px square exists: bigger candidates are dropped.
+const MAX_SQUARE = Math.min(avatar.width, avatar.height);
+const displayed = [...sizes.matchAll(/(\d+)px(?:\s*,|\s*$)/g)].map((match) => Number(match[1]));
+const widths = [...new Set(displayed.flatMap((width) => [width, width * 2]).map((width) => Math.min(width, MAX_SQUARE)))].sort(
+	(a, b) => a - b,
+);
+---
+
+<span class:list={['avatar', variant, className]} {...rest}>
+	{variant === 'dots' && <span class="screen" aria-hidden="true" />}
+	<Image
+		src={avatar}
+		alt="JKS9's avatar: a cocker spaniel puppy holding a daisy"
+		width={Math.min(size, MAX_SQUARE)}
+		height={Math.min(size, MAX_SQUARE)}
+		fit="cover"
+		widths={widths}
+		sizes={sizes}
+		priority={priority}
+	/>
+	{variant === 'dots' && <span class="stamp" aria-hidden="true">Editor</span>}
+</span>
+
+<style>
+	.avatar {
+		position: relative;
+		display: block;
+		flex: 0 0 auto;
+		width: var(--avatar-size, 88px);
+		height: var(--avatar-size, 88px);
+	}
+	img {
+		position: relative;
+		display: block;
+		width: 100%;
+		height: 100%;
+		border-radius: 50%;
+		background: var(--paper);
+		object-fit: cover;
+		object-position: 48% 40%;
+	}
+	.shadow img {
+		border: var(--border) solid var(--green);
+		box-shadow: 4px 4px 0 var(--orange);
+	}
+	.dots img {
+		border: 4px solid var(--green);
+	}
+	/* Orange dot screen behind the photo, shifted like the orange layer of a title */
+	.screen {
+		position: absolute;
+		inset: 0;
+		border-radius: 50%;
+		background-image: radial-gradient(var(--orange) 2.2px, transparent 2.8px);
+		background-size: 11px 11px;
+		transform: translate(var(--misregistration), var(--misregistration));
+	}
+	/* "Editor" stamp, tilted over the bottom right of the frame. It scales with the avatar
+	   (9px text on a 104px avatar, 13px on a 280px one) so it never hides the photo. */
+	.stamp {
+		position: absolute;
+		right: calc(var(--avatar-size, 88px) * -0.05);
+		bottom: 8%;
+		padding: 1px 0.8em;
+		border: max(2px, calc(var(--avatar-size, 88px) * 0.011)) solid var(--orange-text);
+		background: var(--paper);
+		color: var(--orange-text);
+		font-family: var(--font-title);
+		font-size: clamp(9px, calc(var(--avatar-size, 88px) * 0.047), 13px);
+		letter-spacing: 0.1em;
+		line-height: 1.6;
+		text-transform: uppercase;
+		transform: rotate(-8deg);
+	}
+	@media (min-width: 640px) {
+		.shadow img {
+			box-shadow: 5px 5px 0 var(--orange);
+		}
+	}
+</style>

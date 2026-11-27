@@ -1,24 +1,32 @@
 ---
+// Menu link, underlined in orange on the current page.
 import type { HTMLAttributes } from 'astro/types';
+import { ariaCurrent } from '../utils/nav';
 
-type Props = HTMLAttributes<'a'>;
+type Props = HTMLAttributes<'a'> & { href: string };
 
 const { href, class: className, ...props } = Astro.props;
-const pathname = Astro.url.pathname.replace(import.meta.env.BASE_URL, '');
-const subpath = pathname.match(/[^\/]+/g);
-const isActive = href === pathname || href === '/' + (subpath?.[0] || '');
 ---
 
-<a href={href} class:list={[className, { active: isActive }]} {...props}>
+<a href={href} class={className} aria-current={ariaCurrent(Astro.url.pathname, href)} {...props}>
 	<slot />
 </a>
+
 <style>
 	a {
 		display: inline-block;
+		padding: 12px 0;
+		color: var(--ink);
 		text-decoration: none;
 	}
-	a.active {
-		font-weight: bolder;
+	a:hover {
+		color: var(--orange-text);
+	}
+	/* Underline close to the word: a border-bottom would sit too low and shift the link */
+	a[aria-current] {
 		text-decoration: underline;
+		text-decoration-color: var(--orange);
+		text-decoration-thickness: 4px;
+		text-underline-offset: 6px;
 	}
 </style>

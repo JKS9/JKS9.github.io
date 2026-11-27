@@ -1,100 +1,525 @@
 ---
-import { Image } from 'astro:assets';
+// Article page, laid out like an issue of the zine (the "Page article" mockup).
+// Mobile first: everything in one 760px column; the end cards sit side by side from 640px.
+// The Markdown content is styled through :global() rules on .prose, the code blocks
+// through the figures built by src/utils/code-blocks.ts.
 import type { CollectionEntry } from 'astro:content';
-import BaseHead from '../components/BaseHead.astro';
-import Footer from '../components/Footer.astro';
 import FormattedDate from '../components/FormattedDate.astro';
-import Header from '../components/Header.astro';
-import { personJsonLd } from '../consts';
+import Kicker from '../components/Kicker.astro';
+import Overprint from '../components/Overprint.astro';
+import { personJsonLd, PROFILES, SITE_TITLE, websiteJsonLd } from '../consts';
+import BaseLayout from './BaseLayout.astro';
 
-type Props = CollectionEntry<'blog'>['data'];
+type Props = CollectionEntry<'blog'>['data'] & {
+	/** The article's id, which is also its URL slug */
+	slug: string;
+	/** Issue number, N°01 being the oldest article */
+	issue: number;
+	minutes: number;
+	words: number;
+};
 
-const { title, description, pubDate, updatedDate, heroImage } = Astro.props;
+const {
+	title,
+	description,
+	summary,
+	pubDate,
+	updatedDate,
+	tags,
+	heroImage,
+	draft,
+	slug,
+	repo,
+	discuss,
+	issue,
+	minutes,
+	words,
+} = Astro.props;
 
+const issueLabel = String(issue).padStart(2, '0');
 const url = new URL(Astro.url.pathname, Astro.site).href;
+// Shared image: the one drawn for this issue at build (src/pages/og/blog/), unless the front matter sets one
+const shareImage = heroImage ?? `/og/blog/${slug}.png`;
+const profileUrl = (name: string) => PROFILES.find((profile) => profile.name === name)?.url ?? '';
+
 const jsonLd = {
 	'@context': 'https://schema.org',
-	'@type': 'BlogPosting',
-	headline: title,
-	description,
-	url,
-	mainEntityOfPage: url,
-	datePublished: pubDate.toISOString(),
-	dateModified: (updatedDate ?? pubDate).toISOString(),
-	inLanguage: 'en',
-	author: personJsonLd(Astro.site),
+	'@graph': [
+		{
+			'@type': 'BlogPosting',
+			'@id': `${url}#article`,
+			headline: title,
+			description,
+			url,
+			mainEntityOfPage: url,
+			datePublished: pubDate.toISOString(),
+			dateModified: (updatedDate ?? pubDate).toISOString(),
+			inLanguage: 'en',
+			keywords: tags,
+			wordCount: words,
+			image: new URL(typeof shareImage === 'string' ? shareImage : shareImage.src, Astro.site).href,
+			author: personJsonLd(Astro.site),
+			publisher: { '@id': new URL('/#person', Astro.site).href },
+			isPartOf: { '@id': new URL('/#website', Astro.site).href },
+		},
+		websiteJsonLd(Astro.site),
+		{
+			'@type': 'BreadcrumbList',
+			itemListElement: [
+				{ '@type': 'ListItem', position: 1, name: SITE_TITLE, item: new URL('/', Astro.site).href },
+				{ '@type': 'ListItem', position: 2, name: 'Blog', item: new URL('/blog/', Astro.site).href },
+				{ '@type': 'ListItem', position: 3, name: title, item: url },
+			],
+		},
+	],
 };
+
+const discussLinks = discuss
+	? [
+			{ label: 'dev.to', url: discuss.devto ?? profileUrl('dev.to') },
+			{ label: 'Reddit', url: discuss.reddit ?? profileUrl('Reddit') },
+		]
+	: [];
 ---
 
-<html lang="en">
-	<head>
-		<BaseHead title={title} description={description} />
-		<script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
-		<style>
-			main {
-				width: calc(100% - 2em);
-				max-width: 100%;
-				margin: 0;
-			}
-			.hero-image {
-				width: 100%;
-			}
-			.hero-image img {
-				display: block;
-				margin: 0 auto;
-				border-radius: 12px;
-				box-shadow: var(--box-shadow);
-			}
-			.prose {
-				width: 720px;
-				max-width: calc(100% - 2em);
-				margin: auto;
-				padding: 1em;
-				color: rgb(var(--gray-dark));
-			}
-			.title {
-				margin-bottom: 1em;
-				padding: 1em 0;
-				text-align: center;
-				line-height: 1;
-			}
-			.title h1 {
-				margin: 0 0 0.5em 0;
-			}
-			.date {
-				margin-bottom: 0.5em;
-				color: rgb(var(--gray));
-			}
-			.last-updated-on {
-				font-style: italic;
-			}
-		</style>
-	</head>
+<BaseLayout
+	title={title}
+	description={description}
+	image={shareImage}
+	imageAlt={title}
+	jsonLd={jsonLd}
+	article={{ published: pubDate, modified: updatedDate, tags }}
+	noindex={draft}
+>
+	<article class="post" aria-labelledby="post-title">
+		<header class="post-head">
+			<Kicker class="post-kicker">{[draft && 'Draft', `Issue ${issueLabel}`, ...tags].filter(Boolean).join(' · ')}</Kicker>
+			<Overprint as="h1" id="post-title" class="post-title" text={title} />
+			<p class="byline">
+				By <a href="/about/" rel="author">JKS9</a> · <FormattedDate date={pubDate} /> · {minutes} min read
+				{
+					updatedDate && (
+						<>
+							{' '}
+							· Updated <FormattedDate date={updatedDate} />
+						</>
+					)
+				}
+			</p>
+		</header>
 
-	<body>
-		<Header />
-		<main>
-			<article>
-				<div class="hero-image">
-					{heroImage && <Image width={1020} height={510} src={heroImage} alt="" />}
-				</div>
-				<div class="prose">
-					<div class="title">
-						<div class="date">
-							<FormattedDate date={pubDate} />
-							{updatedDate && (
-								<div class="last-updated-on">
-									Last updated on <FormattedDate date={updatedDate} />
-								</div>
-							)}
+		{
+			summary && (
+				<p class="in-short">
+					<strong>In short:</strong> {summary}
+				</p>
+			)
+		}
+
+		<div class="prose">
+			<slot />
+		</div>
+
+		{
+			(repo || discuss) && (
+				<section class="after" aria-label="After the article">
+					{repo && (
+						<a class="after-card code-card" href={repo.url}>
+							<Kicker as="span">The code</Kicker>
+							<span class="repo-name">{repo.name}</span>
+							<span class="repo-text">{repo.description}</span>
+						</a>
+					)}
+					{discuss && (
+						<div class="after-card discuss-card">
+							<Kicker as="span">Discuss</Kicker>
+							<span class="question">{discuss.question}</span>
+							<span class="discuss-links">
+								{discussLinks.map((link) => (
+									<a href={link.url}>{link.label}</a>
+								))}
+							</span>
 						</div>
-						<h1>{title}</h1>
-						<hr />
-					</div>
-					<slot />
-				</div>
-			</article>
-		</main>
-		<Footer />
-	</body>
-</html>
+					)}
+				</section>
+			)
+		}
+	</article>
+</BaseLayout>
+
+<style>
+	.post {
+		display: flex;
+		flex-direction: column;
+		gap: 20px;
+		max-width: 760px;
+		margin-inline: auto;
+		font-size: 18px;
+		line-height: 1.7;
+	}
+
+	/* Header: issue line, title off register, byline */
+	.post-head {
+		display: flex;
+		flex-direction: column;
+		gap: 18px;
+	}
+	.post-title {
+		--overprint-size: 24px;
+		--overprint-leading: 1.18;
+		--misregistration: 3px;
+	}
+	.byline {
+		margin: 0;
+		color: var(--green);
+		font-size: 15px;
+		line-height: 1.6;
+	}
+
+	/* "In short": the summary between two ink rules */
+	.in-short {
+		margin: 8px 0 0;
+		padding: 18px 0;
+		border-top: var(--border) solid var(--ink);
+		border-bottom: var(--border) solid var(--ink);
+	}
+
+	/* Body text */
+	.prose {
+		overflow-wrap: break-word;
+	}
+	.prose :global(> :first-child) {
+		margin-top: 0;
+	}
+	/* A first heading keeps some air under the "In short" rule */
+	.prose :global(> h2:first-child) {
+		margin-top: 28px;
+	}
+	.prose :global(p),
+	.prose :global(ul),
+	.prose :global(ol) {
+		margin: 0 0 1.1em;
+	}
+	.prose :global(ul) {
+		padding-left: 1.4em;
+	}
+	/* "1. " is wider than a bullet in Courier: more room so the numbers stay inside the column */
+	.prose :global(ol) {
+		padding-left: 2em;
+	}
+	.prose :global(li + li) {
+		margin-top: 0.4em;
+	}
+	.prose :global(h2) {
+		margin: 1.8em 0 0.7em;
+		font-size: 20px;
+		line-height: 1.3;
+	}
+	.prose :global(h3) {
+		margin: 1.6em 0 0.6em;
+		font-size: 17px;
+		line-height: 1.35;
+	}
+	/* Code inside a heading keeps the heading's look, in the text font */
+	.prose :global(h2 code),
+	.prose :global(h3 code) {
+		padding: 0;
+		background: none;
+		font-family: var(--font-text);
+		font-size: 1em;
+		font-weight: 700;
+	}
+	.prose :global(img) {
+		display: block;
+		margin: 1.6em auto;
+	}
+	.prose :global(hr) {
+		margin: 2.4em 0;
+	}
+	/* A table stays a table (display: block would hide its rows and columns from screen readers in
+	   Safari): it fits the column and long words wrap inside their cell instead of scrolling. */
+	.prose :global(table) {
+		margin: 1.6em 0;
+		font-size: 15px;
+	}
+	.prose :global(th),
+	.prose :global(td) {
+		overflow-wrap: anywhere;
+	}
+	.prose :global(th),
+	.prose :global(td) {
+		padding: 8px 12px;
+		border-bottom: var(--border-thin) dashed var(--green);
+		text-align: left;
+	}
+	.prose :global(th) {
+		border-bottom: var(--border) solid var(--ink);
+	}
+
+	/* Pull quote: green frame, a dot patch over its corner, the words in the title font */
+	.prose :global(blockquote) {
+		position: relative;
+		margin: 1.6em 0;
+		padding: 24px 20px;
+		border: var(--border) solid var(--green);
+	}
+	.prose :global(blockquote::before) {
+		content: '';
+		position: absolute;
+		top: -12px;
+		left: -10px;
+		width: 72px;
+		height: 54px;
+		background-image: radial-gradient(var(--orange) 2px, transparent 2.6px);
+		background-size: 9px 9px;
+		mix-blend-mode: multiply;
+	}
+	.prose :global(blockquote p) {
+		position: relative;
+		margin: 0;
+		color: var(--green);
+		font-family: var(--font-title);
+		font-size: 17px;
+		line-height: 1.4;
+	}
+	.prose :global(blockquote p + p) {
+		margin-top: 0.8em;
+	}
+
+	/* Code blocks: the three variants of the style sheet */
+	.prose :global(figure.code) {
+		position: relative;
+		margin: 1.6em 0;
+	}
+	.prose :global(figure.code pre) {
+		margin: 0;
+		font-size: 13px;
+		line-height: 1.6;
+	}
+	.prose :global(figure.code code) {
+		display: grid;
+		width: max-content;
+		min-width: 100%;
+	}
+	/* An empty line still takes one line of height */
+	.prose :global(figure.code .line:empty::after) {
+		content: ' ';
+	}
+
+	/* 1 · Code: pale green, green frame, the language in a tab at the top right */
+	.prose :global(.code-source) {
+		border: var(--border-thin) solid var(--green);
+		background: var(--green-pale);
+	}
+	.prose :global(.code-source figcaption) {
+		position: absolute;
+		top: calc(var(--border-thin) * -1);
+		right: calc(var(--border-thin) * -1);
+		z-index: 1;
+		padding: 2px 12px;
+		background: var(--green);
+		color: var(--paper);
+		font-size: 13px;
+		font-weight: 700;
+		line-height: 1.6;
+	}
+	.prose :global(.code-source pre) {
+		padding: 34px 16px 16px;
+	}
+
+	/* 5 · Output (alerts, terminal): solid green, white text, a header over a dashed pale orange rule */
+	.prose :global(.code-output) {
+		background: var(--green);
+		color: var(--paper);
+	}
+	.prose :global(.code-output figcaption) {
+		padding: 10px 16px;
+		border-bottom: var(--border-thin) dashed var(--orange-pale);
+		font-size: 13px;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		line-height: 1.6;
+		text-transform: uppercase;
+	}
+	.prose :global(.code-output pre),
+	.prose :global(.code-output pre span) {
+		background: none !important;
+		color: var(--paper) !important;
+	}
+	.prose :global(.code-output pre) {
+		padding: 16px 16px 20px;
+	}
+	/* Bullets of an alert ("• field: type") in pale orange, as in the style sheet */
+	.prose :global(.code-output pre span.bullet) {
+		color: var(--orange-pale) !important;
+	}
+
+	/* 6 · Changes: ink frame, file name and +n −n in the header, one background per changed line */
+	.prose :global(.code-diff) {
+		border: var(--border-thin) solid var(--ink);
+	}
+	.prose :global(.code-diff figcaption) {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: space-between;
+		gap: 4px 12px;
+		padding: 6px 14px;
+		border-bottom: var(--border-thin) solid var(--ink);
+		font-size: 12px;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		line-height: 1.6;
+		text-transform: uppercase;
+	}
+	.prose :global(.code-diff .count-added) {
+		color: var(--orange-text-on-pale);
+	}
+	.prose :global(.code-diff .count-removed) {
+		color: var(--green);
+	}
+	.prose :global(.code-diff pre) {
+		padding: 10px 0;
+		background: var(--paper) !important;
+	}
+	.prose :global(.code-diff .line) {
+		padding: 0 14px;
+	}
+	.prose :global(.code-diff .added) {
+		background: var(--orange-pale);
+	}
+	.prose :global(.code-diff .added span[style*='user-select']) {
+		color: var(--orange-text-on-pale);
+		font-weight: 700;
+	}
+	.prose :global(.code-diff .removed) {
+		background: var(--green-pale);
+	}
+	.prose :global(.code-diff .removed),
+	.prose :global(.code-diff .removed span) {
+		color: var(--green) !important;
+		text-decoration: line-through;
+	}
+	/* The sign stays readable without the color: not struck through */
+	.prose :global(.code-diff .removed span[style*='user-select']) {
+		display: inline-block;
+		text-decoration: none;
+	}
+
+	/* After the article: the code, and where to discuss it */
+	.after {
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
+		margin-top: 24px;
+	}
+	.after-card {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+		padding: 18px;
+	}
+	.code-card {
+		border: var(--border) solid var(--ink);
+		color: var(--ink);
+		text-decoration: none;
+	}
+	.code-card:hover .repo-name {
+		color: var(--orange-text);
+	}
+	.repo-name {
+		font-weight: 700;
+		overflow-wrap: anywhere;
+	}
+	.repo-text,
+	.question {
+		font-size: 16px;
+		line-height: 1.6;
+	}
+	.discuss-card {
+		border: var(--border) dashed var(--green);
+	}
+	.discuss-links {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 4px 24px;
+	}
+	.discuss-links a {
+		padding: 8px 0;
+	}
+
+	@media (min-width: 640px) {
+		.post {
+			gap: 22px;
+			font-size: 19px;
+			line-height: 1.75;
+		}
+		.post-title {
+			--overprint-size: clamp(30px, 4.4vw, 48px);
+			--overprint-leading: 1.12;
+		}
+		/* A touch smaller than the page kickers, as in the mockup */
+		.post-head .post-kicker {
+			font-size: 13px;
+		}
+		.byline {
+			font-size: 16px;
+		}
+		.in-short {
+			padding: 20px 0;
+			font-size: 21px;
+		}
+		.prose :global(h2) {
+			font-size: 24px;
+		}
+		.prose :global(h3) {
+			font-size: 20px;
+		}
+		.prose :global(blockquote) {
+			padding: 28px 32px;
+		}
+		.prose :global(blockquote::before) {
+			top: -14px;
+			left: -14px;
+			width: 84px;
+			height: 64px;
+		}
+		.prose :global(blockquote p) {
+			font-size: 22px;
+		}
+		.prose :global(figure.code pre) {
+			font-size: 16px;
+		}
+		.prose :global(.code-source pre) {
+			padding: 22px 24px;
+		}
+		.prose :global(.code-source figcaption) {
+			font-size: 14px;
+		}
+		.prose :global(.code-output figcaption) {
+			padding: 10px 20px;
+			font-size: 14px;
+		}
+		.prose :global(.code-output pre) {
+			padding: 18px 20px 22px;
+		}
+		.prose :global(.code-diff figcaption) {
+			font-size: 13px;
+		}
+		.after {
+			flex-direction: row;
+			flex-wrap: wrap;
+			gap: 24px;
+			margin-top: 40px;
+		}
+		.after-card {
+			flex: 1 1 300px;
+			padding: 22px;
+		}
+		.repo-text {
+			font-size: 16px;
+		}
+		.question {
+			font-size: 17px;
+		}
+	}
+</style>

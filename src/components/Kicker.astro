@@ -1,0 +1,27 @@
+---
+// Small spaced-out line above a title, like the issue line of a magazine cover
+// ("Latest issue · N°01 · December 2026", "Error · page not found").
+import type { HTMLAttributes } from 'astro/types';
+
+type Props = HTMLAttributes<'p'> & { as?: 'p' | 'span' | 'div' };
+
+const { as: Element = 'p', class: className, ...rest } = Astro.props;
+---
+
+<Element class:list={['kicker', className]} {...rest}><slot /></Element>
+
+<style>
+	.kicker {
+		margin: 0;
+		color: var(--orange-text);
+		font-family: var(--font-title);
+		font-size: 12px;
+		letter-spacing: 0.12em;
+	}
+	@media (min-width: 640px) {
+		.kicker {
+			font-size: 14px;
+			letter-spacing: 0.14em;
+		}
+	}
+</style>

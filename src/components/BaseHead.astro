@@ -3,35 +3,61 @@
 // all pages through the use of the <BaseHead /> component.
 import '../styles/global.css';
 import type { ImageMetadata } from 'astro';
-import FallbackImage from '../assets/blog-placeholder-1.jpg';
-import { AUTHOR, SITE_TAGLINE, SITE_TITLE } from '../consts';
-import { Font } from 'astro:assets';
+import { AUTHOR, DEFAULT_SHARE_IMAGE, PROFILES, RSS_FEEDS, SITE_TAGLINE, SITE_TITLE } from '../consts';
+import { Font, getImage } from 'astro:assets';
 
 interface Props {
 	title: string;
 	description: string;
-	image?: ImageMetadata;
+	/** Shared image: an imported image (resized here), or the path of a 1200 × 630 one drawn at build (/og/…) */
+	image?: ImageMetadata | string;
+	/** Describes the shared image; the site name and tagline by default */
+	imageAlt?: string;
+	/** Article dates and topics: the page is then shared as an article, not a website */
+	article?: { published: Date; modified?: Date; tags: string[] };
+	/** Keeps the page out of search results; it then claims no canonical URL either */
+	noindex?: boolean;
 }
 
 const canonicalURL = new URL(Astro.url.pathname, Astro.site);
 
-const { title, description, image = FallbackImage } = Astro.props;
-const fullTitle = title === SITE_TITLE ? `${SITE_TITLE} · ${SITE_TAGLINE}` : `${title} · ${SITE_TITLE}`;
+const {
+	title,
+	description,
+	image = DEFAULT_SHARE_IMAGE,
+	imageAlt = `${SITE_TITLE} · ${SITE_TAGLINE}`,
+	article,
+	noindex = false,
+} = Astro.props;
+// "JKS9 · Web scraping in production" on the home; "<page> · JKS9" elsewhere, unless the page title names JKS9 already
+const fullTitle =
+	title === SITE_TITLE ? `${SITE_TITLE} · ${SITE_TAGLINE}` : title.includes(SITE_TITLE) ? title : `${title} · ${SITE_TITLE}`;
 
+// The shared image at the size social networks expect (1200 × 630). A drawn one (/og/…) is that size
+// already; an imported one is cropped and converted here.
+const shareImage =
+	typeof image === 'string'
+		? { src: image, attributes: { width: 1200, height: 630 } }
+		: await getImage({ src: image, width: 1200, height: 630, fit: 'cover', format: 'jpg' });
+const imageURL = new URL(shareImage.src, Astro.site);
+const imageWidth = String(shareImage.attributes.width ?? 1200);
+const imageHeight = String(shareImage.attributes.height ?? 630);
 ---
 
 <!-- Global Metadata -->
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-<link rel="icon" href="/favicon.ico" />
+<!-- Tab icon, drawn at build (src/pages/favicon.*): SVG for current browsers, ICO for the others -->
+<link rel="icon" href="/favicon.ico" sizes="32x32" />
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<meta name="theme-color" content="#2F6152" />
 <link rel="sitemap" href="/sitemap-index.xml" />
-<link
-	rel="alternate"
-	type="application/rss+xml"
-	title={SITE_TITLE}
-	href={new URL('rss.xml', Astro.site)}
-/>
+{
+	Object.values(RSS_FEEDS).map((feed) => (
+		<link rel="alternate" type="application/rss+xml" title={feed.title} href={new URL(feed.path, Astro.site)} />
+	))
+}
 <meta name="generator" content={Astro.generator} />
 
 <!-- Preload only what the first screen shows: titles and regular text -->
@@ -39,31 +65,62 @@ const fullTitle = title === SITE_TITLE ? `${SITE_TITLE} · ${SITE_TAGLINE}` : `$
 <Font cssVariable="--font-text" preload={[{ weight: '400', style: 'normal' }]} />
 <Font cssVariable="--font-hand" />
 
-<!-- Canonical URL -->
-<link rel="canonical" href={canonicalURL} />
+<!-- Canonical URL (none on a page kept out of search results) -->
+{!noindex && <link rel="canonical" href={canonicalURL} />}
 
 <!-- Primary Meta Tags -->
 <title>{fullTitle}</title>
 <meta name="author" content={AUTHOR.name} />
 <meta name="description" content={description} />
+<!-- Lets Google show large image previews (Search, Discover) and long snippets -->
+<meta name="robots" content={noindex ? 'noindex, follow' : 'max-image-preview:large, max-snippet:-1'} />
+<link rel="author" href="/about/" />
+<!-- The same person on these profiles (IndieWeb rel="me"): ties them to this site -->
+{PROFILES.map((profile) => <link rel="me" href={profile.url} />)}
 
 <!-- Open Graph / Facebook -->
-<meta property="og:type" content="website" />
-<meta property="og:url" content={Astro.url} />
+<meta property="og:type" content={article ? 'article' : 'website'} />
+{
+	article && (
+		<>
+			<meta property="article:published_time" content={article.published.toISOString()} />
+			<meta property="article:modified_time" content={(article.modified ?? article.published).toISOString()} />
+			<meta property="article:author" content={new URL('/about/', Astro.site)} />
+			{article.tags.map((tag) => (
+				<meta property="article:tag" content={tag} />
+			))}
+		</>
+	)
+}
+{!noindex && <meta property="og:url" content={canonicalURL} />}
 <meta property="og:site_name" content={SITE_TITLE} />
+<meta property="og:locale" content="en_US" />
 <meta property="og:title" content={fullTitle} />
 <meta property="og:description" content={description} />
-<meta property="og:image" content={new URL(image.src, Astro.url)} />
+<meta property="og:image" content={imageURL} />
+<meta property="og:image:width" content={imageWidth} />
+<meta property="og:image:height" content={imageHeight} />
+<meta property="og:image:alt" content={imageAlt} />
 
-<!-- Twitter -->
+<!-- Twitter / X -->
 <meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content={fullTitle} />
+<meta name="twitter:description" content={description} />
+<meta name="twitter:image" content={imageURL} />
+<meta name="twitter:image:alt" content={imageAlt} />
 
-<!-- Cloudflare Web Analytics (no cookies). Production only, so local visits are not counted. -->
-{import.meta.env.PROD && (
-	<script
-		is:inline
-		type="module"
-		src="https://static.cloudflareinsights.com/beacon.min.js"
-		data-cf-beacon='{"token": "58e6c756170c45229c6071dc569144ce"}'
-	></script>
-)}
+<!-- Cloudflare Web Analytics (no cookies). Loaded only on jks9.dev itself: neither `yarn dev`,
+     nor `yarn preview` (also a production build), nor a copy of the site counts as a visit. -->
+{
+	import.meta.env.PROD && (
+		<script is:inline>
+			if (location.hostname === 'jks9.dev') {
+				const beacon = document.createElement('script');
+				beacon.defer = true;
+				beacon.src = 'https://static.cloudflareinsights.com/beacon.min.js';
+				beacon.dataset.cfBeacon = '{"token": "58e6c756170c45229c6071dc569144ce"}';
+				document.head.append(beacon);
+			}
+		</script>
+	)
+}

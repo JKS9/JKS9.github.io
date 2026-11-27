@@ -1,0 +1,27 @@
+---
+// Bold green text link with an arrow ("All issues →").
+import type { HTMLAttributes } from 'astro/types';
+
+type Props = HTMLAttributes<'a'> & {
+	href: string;
+	arrow?: 'back' | 'forward';
+};
+
+const { arrow = 'forward', class: className, ...rest } = Astro.props;
+---
+
+<a class:list={['arrow-link', className]} {...rest}>
+	{arrow === 'back' && <span aria-hidden="true">←</span>}
+	<slot />
+	{arrow === 'forward' && <span aria-hidden="true">→</span>}
+</a>
+
+<style>
+	.arrow-link {
+		display: inline-flex;
+		align-items: baseline;
+		gap: 0.5em;
+		padding: 12px 0;
+		font-weight: 700;
+	}
+</style>

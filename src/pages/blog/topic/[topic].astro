@@ -1,0 +1,31 @@
+---
+// One page per topic: the archive filtered on that topic, with its filter stamp filled.
+import IssueArchive from '../../../components/IssueArchive.astro';
+import { BLOG_SHARE_IMAGE } from '../../../consts';
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import { getIssues, getTopics, type Topic, topicSlug } from '../../../utils/issues';
+
+export async function getStaticPaths() {
+	const topics = getTopics(await getIssues());
+	return topics.map((topic) => ({ params: { topic: topic.slug }, props: { topic } }));
+}
+
+interface Props {
+	topic: Topic;
+}
+
+const { topic } = Astro.props;
+const issues = await getIssues();
+const topics = getTopics(issues);
+const filtered = issues.filter((issue) => issue.post.data.tags.some((name) => topicSlug(name) === topic.slug));
+---
+
+<!-- A topic with a single issue only repeats the blog page: kept out of search results until it has two -->
+<BaseLayout
+	title={`${topic.name} issues`}
+	description={`Every JKS9 issue about ${topic.name}, newest first: web scraping in production, in Node.js and TypeScript.`}
+	image={BLOG_SHARE_IMAGE}
+	noindex={topic.count < 2}
+>
+	<IssueArchive issues={filtered} topics={topics} current={topic} />
+</BaseLayout>

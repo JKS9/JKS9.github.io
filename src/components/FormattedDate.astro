@@ -1,15 +1,21 @@
 ---
 interface Props {
 	date: Date;
+	/** Leaves the year out, when the page already groups the issues by year */
+	year?: boolean;
 }
 
-const { date } = Astro.props;
+const { date, year = true } = Astro.props;
 ---
 
 <time datetime={date.toISOString()}>
-	{date.toLocaleDateString('en-us', {
-		year: 'numeric',
-		month: 'short',
-		day: 'numeric',
-	})}
+	{
+		date.toLocaleDateString('en-us', {
+			year: year ? 'numeric' : undefined,
+			month: 'short',
+			day: 'numeric',
+			// Frontmatter dates are midnight UTC: read them in UTC, whatever the build machine's timezone
+			timeZone: 'UTC',
+		})
+	}
 </time>

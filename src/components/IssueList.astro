@@ -1,0 +1,167 @@
+---
+// Table of contents of the zine: issue number, title, optional summary, date.
+// Used by the home page (5 newest), the blog (all issues) and the 404 (the latest).
+// Mobile first: on a phone the number and the date share a line, the title goes under them.
+// From 640px: one row per issue, number | title | date.
+import type { Issue } from '../utils/issues';
+import FormattedDate from './FormattedDate.astro';
+
+interface Props {
+	issues: Issue[];
+	/** Shows each article's description under its title */
+	summary?: boolean;
+	/** Thick ink rule above the first issue */
+	rule?: boolean;
+	/** Centers each issue on a phone (the 404 page) */
+	center?: boolean;
+	/** Shows the year in the date. Off in the archive, where a heading gives the year. */
+	withYear?: boolean;
+	/** Adds a "NEW" stamp after the title of the latest issue (home page) */
+	newBadge?: boolean;
+}
+
+const { issues, summary = false, rule = true, center = false, withYear = true, newBadge = false } = Astro.props;
+---
+
+<ol class:list={['issues', { rule, center }]}>
+	{
+		issues.map((issue) => (
+			<li>
+				<a href={issue.url}>
+					<span class:list={['number', { latest: issue.isLatest }]}>{issue.label}</span>
+					<span class="text">
+						<span class="title">
+							{issue.post.data.title}
+							{newBadge && issue.isLatest && <span class="new">New</span>}
+						</span>
+						{summary && <span class="summary">{issue.post.data.description}</span>}
+					</span>
+					<span class="meta">
+						<FormattedDate date={issue.post.data.pubDate} year={withYear} />
+						{issue.post.data.tags.length > 0 && <span> · {issue.post.data.tags.join(' · ')}</span>}
+					</span>
+				</a>
+			</li>
+		))
+	}
+</ol>
+
+<style>
+	.issues {
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+	.rule {
+		border-top: var(--border) solid var(--ink);
+	}
+	li {
+		border-bottom: var(--border-thin) dashed var(--green);
+	}
+	a {
+		display: grid;
+		grid-template-columns: auto minmax(0, 1fr);
+		grid-template-areas:
+			'number meta'
+			'text text';
+		align-items: baseline;
+		gap: 4px 12px;
+		padding: 16px 0;
+		color: var(--ink);
+		text-decoration: none;
+	}
+	.center a {
+		grid-template-columns: 1fr auto auto 1fr;
+		grid-template-areas:
+			'. number meta .'
+			'text text text text';
+		text-align: center;
+	}
+	.number {
+		grid-area: number;
+		color: var(--green);
+		font-family: var(--font-title);
+		font-size: 18px;
+	}
+	.number.latest {
+		color: var(--orange-text);
+	}
+	.text {
+		grid-area: text;
+		min-width: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+	}
+	.title {
+		font-size: 19px;
+		font-weight: 700;
+		line-height: 1.35;
+	}
+	a:hover .title {
+		color: var(--orange-text);
+	}
+	/* Stamp: thin orange frame, slightly tilted */
+	.new {
+		display: inline-block;
+		margin-left: 8px;
+		padding: 0 8px;
+		border: var(--border-thin) solid var(--orange-text);
+		color: var(--orange-text);
+		font-family: var(--font-title);
+		font-size: 12px;
+		font-weight: 400;
+		line-height: 1.8;
+		vertical-align: middle;
+		transform: rotate(-4deg);
+	}
+	.summary {
+		font-size: 15px;
+		line-height: 1.5;
+	}
+	.meta {
+		grid-area: meta;
+		color: var(--green);
+		font-size: 14px;
+	}
+
+	/* From 640px: the number gets its own column; the date goes under the title until there is room
+	   for a third column (900px), so the title never gets squeezed. A centered list (the 404) stays
+	   centered until 960px, like the page around it. */
+	@media (min-width: 640px) {
+		a {
+			padding: 20px 0;
+		}
+		.issues:not(.center) a {
+			grid-template-columns: 84px minmax(0, 1fr);
+			grid-template-areas:
+				'number text'
+				'. meta';
+			gap: 6px 24px;
+		}
+		.number,
+		.title {
+			font-size: 22px;
+		}
+		.summary {
+			font-size: 16px;
+		}
+		.meta {
+			font-size: 15px;
+		}
+	}
+	@media (min-width: 900px) {
+		.issues:not(.center) a {
+			grid-template-columns: 84px minmax(0, 1fr) auto;
+			grid-template-areas: 'number text meta';
+		}
+	}
+	@media (min-width: 960px) {
+		.center a {
+			grid-template-columns: 84px minmax(0, 1fr) auto;
+			grid-template-areas: 'number text meta';
+			gap: 6px 24px;
+			text-align: left;
+		}
+	}
+</style>

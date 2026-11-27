@@ -1,0 +1,72 @@
+---
+// A title printed twice, like a riso print slightly off register:
+// the green layer on top, the orange one shifted by --misregistration.
+// The text is in the HTML once: the orange layer is drawn by CSS (::before) from data-text,
+// so search engines, AI crawlers, reader modes and copy/paste never get the title twice.
+import type { HTMLAttributes } from 'astro/types';
+
+type Tag = 'h1' | 'h2' | 'h3' | 'p' | 'span' | 'div';
+
+type Props = HTMLAttributes<'div'> & {
+	text: string;
+	as?: Tag;
+	/** Font size, any CSS length (e.g. "clamp(88px, 15vw, 210px)") */
+	size?: string;
+	/** Overrides --misregistration for this title (e.g. "6px") */
+	offset?: string;
+	/** Hides the whole title from screen readers when the page says it in words elsewhere */
+	decorative?: boolean;
+};
+
+const { text, as: Element = 'span', size, offset, decorative = false, class: className, ...rest } = Astro.props;
+const style = [size && `--overprint-size: ${size}`, offset && `--misregistration: ${offset}`]
+	.filter(Boolean)
+	.join('; ');
+---
+
+<Element
+	class:list={['overprint', className]}
+	style={style || undefined}
+	data-text={text}
+	aria-hidden={decorative ? 'true' : undefined}
+	{...rest}
+>
+	<span class="layer">{text}</span>
+</Element>
+
+<style>
+	.overprint {
+		position: relative;
+		display: block;
+		margin: 0;
+		color: var(--green);
+		font-family: var(--font-title);
+		font-size: var(--overprint-size, 1em);
+		font-weight: 400;
+		/* Tight for one-line titles; a title that wraps sets --overprint-leading around 1.05 */
+		line-height: var(--overprint-leading, 0.9);
+		/* Wrap between words only: a short title like "404" never breaks in the middle */
+		overflow-wrap: normal;
+	}
+	/* The orange layer. As wide as the green one, so a title on two lines breaks at the same word.
+	   The "/ ''" alternative text keeps screen readers from reading it; browsers that don't know
+	   that syntax use the first declaration. */
+	.overprint::before {
+		content: attr(data-text);
+		content: attr(data-text) / '';
+		position: absolute;
+		top: 0;
+		right: 0;
+		left: 0;
+		color: var(--orange);
+		mix-blend-mode: multiply;
+		transform: translate(var(--misregistration), var(--misregistration));
+		pointer-events: none;
+		user-select: none;
+	}
+	.layer {
+		position: relative;
+		display: block;
+		mix-blend-mode: multiply;
+	}
+</style>
