@@ -1,6 +1,5 @@
 // Content of the About page, also used by the "The editor" box of the home page.
 // The beliefs are what JKS9 thinks about scraping, not the theses of his articles.
-// The timeline lists years and tech only, never an employer.
 
 export interface Belief {
   title: string;
@@ -95,13 +94,29 @@ export const KIT: KitStep[] = [
     years: "2021 – 2022",
     title: "Full-stack, on a blockchain",
     text: "The interface of a decentralized project management app: sign-in, profiles, comments, invitations, dark mode.",
-    stack: ["TypeScript", "Vue.js", "Vuetify", "MongoDB", "Internet Computer (ICP)"],
+    stack: [
+      "TypeScript",
+      "Vue.js",
+      "Vuetify",
+      "MongoDB",
+      "Internet Computer (ICP)",
+    ],
   },
   {
     years: "2022 – 2024",
     title: "NestJS APIs under load",
     text: "A mobile API built to handle high loads, and back-end apprentices to train along the way.",
-    stack: ["TypeScript", "Node.js", "NestJS", "MongoDB", "AWS", "Docker", "Firebase", "Mandrill", "Jest"],
+    stack: [
+      "TypeScript",
+      "Node.js",
+      "NestJS",
+      "MongoDB",
+      "AWS",
+      "Docker",
+      "Firebase",
+      "Mandrill",
+      "Jest",
+    ],
   },
   {
     years: "2025 – today",
